@@ -1,13 +1,23 @@
-fn hex2bytes(hex: &str) -> Result([u8], &'static str) {
-  try!(hex2bigint).to_bytes_be();
+use super::hex2bigint;
+use std::str;
+
+fn hex2bytes(hex: &str) -> Result<Vec<u8>, &'static str> {
+  let (_, uint) = try!(hex2bigint(hex)).to_bytes_be();
+  Ok(uint)
 }
 
-pub fn xor_strings<'g>(plain: &'g str, _: &'g str) -> Result<&'g str, &'static str> {
-  let pbytes = try!(hex2bytes(plain));
-  let kbytes = try!(hex2bytes(key));
+pub fn xor_strings<'g>(plain: &'g str, key: &'g str) -> Result<String, &'static str> {
+  let pvec = try!(hex2bytes(plain));
+  let kvec = try!(hex2bytes(key));
 
-
-  Ok(plain)
+  String::from_utf8(
+    pvec.iter()
+    .zip(kvec)
+    .map(|(p,k)|
+         p ^ k
+        )
+    .collect()
+    ).map_err(|_| "problems making a string of result")
 }
 
 #[cfg(test)]
