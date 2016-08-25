@@ -1,5 +1,7 @@
+use super::utils::*;
+
 pub fn hex2base64(hex: &str) -> Result<String, &'static str> {
-  super::hex2bigint(hex).and_then(|num| super::bigint2base64(num))
+  hex2bigint(hex).and_then(|num| bigint2base64(num))
 }
 
 #[cfg(test)]

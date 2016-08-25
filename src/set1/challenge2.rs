@@ -1,19 +1,4 @@
-use super::hex2bigint;
-use std::str;
-
-pub fn hex2bytes(hex: &str) -> Result<Vec<u8>, &'static str> {
-  let (_, uint) = try!(hex2bigint(hex)).to_bytes_be();
-  Ok(uint)
-}
-
-pub fn xor_bytestrings(pvec: Vec<u8>, kvec: Vec<u8>) -> Vec<u8> {
-    pvec.iter()
-    .zip(kvec)
-    .map(|(p,k)|
-         p ^ k
-        )
-    .collect()
-}
+pub use super::utils::*;
 
 #[cfg(test)]
 mod tests {
@@ -26,7 +11,7 @@ mod tests {
   #[test]
   fn example_xor() {
     assert_eq!(
-      make_string(xor_bytestrings(
+      make_string(xor_iters(
         hex2bytes("1c0111001f010100061a024b53535009181c").unwrap(),
         hex2bytes("686974207468652062756c6c277320657965").unwrap()
         )),
