@@ -22,16 +22,18 @@ pub fn best_decrypt(encrypted: &str) -> Vec<u8> {
   let mut best = decrypt(cstr.clone(), b'0');
 
   for c in 0..255 {
-    let trial = decrypt(cstr.clone(), c);
-    let score = english_score(&trial);
-    if score > 0 {
-    }
+    let (trial, score) = scored_decrypt(cstr.clone(), c);
     if score > max_score {
       best = trial;
       max_score = score
     }
   }
   best
+}
+
+pub fn scored_decrypt(crypted: Vec<u8>, key: u8) -> (u32, Vec<u8>) {
+    let trial = decrypt(cstr.clone(), c);
+    (english_score(&trial), trial)
 }
 
 use super::utils::*;
