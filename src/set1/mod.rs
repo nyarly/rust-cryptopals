@@ -3,12 +3,11 @@ pub mod challenge2;
 pub mod challenge3;
 pub mod challenge4;
 
-
 mod utils {
   use num_bigint::BigInt;
   use serialize::base64::{STANDARD,ToBase64};
   use std::ops::BitXor;
-  use std::iter::{FromIterator,IntoIterator};
+  use std::iter::{self,FromIterator,IntoIterator};
 
   pub fn hex2bigint(hex: &str) -> Result<BigInt,&'static str> {
     return BigInt::parse_bytes(hex.as_bytes(), 16).ok_or("Couldn't parse as hex")
@@ -25,6 +24,28 @@ mod utils {
     Ok(uint)
   }
 
+  pub fn scored_decrypt(crypted: Vec<u8>, key: u8) -> (u32, Vec<u8>) {
+    let trial = decrypt(crypted.clone(), key);
+    (english_score(&trial), trial)
+  }
+
+  pub fn best_score<I>(mut list: I) -> Option<(u32, Vec<u8>)> where
+    I: Iterator<Item=(u32, Vec<u8>)>
+    {
+      match list.next() {
+        None => None,
+        Some(v) =>
+          Some(list.fold(v, |best, candidate| {
+            let (max_score, _) = best;
+            let (score, _) = candidate;
+            if score > max_score {
+              candidate
+            } else {
+              best
+            }}))
+      }
+    }
+
   pub fn xor_iters<I,J,V>(pvec: I, kvec: J) -> I
     where I: IntoIterator<Item=V>+FromIterator<<V as BitXor>::Output>,
           J: IntoIterator<Item=V>,
@@ -37,14 +58,68 @@ mod utils {
               .collect()
           }
 
+  pub fn decrypt(crypted: Vec<u8>, key: u8) -> Vec<u8> {
+    xor_iters(crypted, iter::repeat(key))
+  }
+
+  pub fn english_score(bytes: &Vec<u8>) -> u32 {
+    bytes.iter()
+      .fold(1, |score, letter|
+            if score == 0 {
+              0
+            } else {
+              match *letter {
+                b' ' =>  score + 13 ,
+                b'e'|b'E' => score + 13,
+                b't'|b'T' => score + 12,
+                b'a'|b'A' => score + 11,
+                b'o'|b'O' => score + 10,
+                b'i'|b'I' => score + 9,
+                b'n'|b'N' => score + 8,
+                b's'|b'S' => score + 7,
+                b'h'|b'H' => score + 6,
+                b'r'|b'R' => score + 5,
+                b'd'|b'D' => score + 4,
+                b'l'|b'L' => score + 3,
+                b'c'|b'C' => score + 2,
+                b'u'|b'U' => score + 1,
+                b' '...b'~' => score,
+                _ =>  0,
+              }
+            }
+
+    )
+  }
+
 
   #[cfg(test)]
   mod tests {
+    use super::*;
     use num_bigint::BigInt;
     use num::cast::ToPrimitive;
     #[test]
     fn can_bigint_from_hex() {
       assert_eq!( BigInt::to_u32(&super::hex2bigint("a7").unwrap()).unwrap(), 167)
+    }
+
+    fn string_score(s: &str) -> u32 {
+      let v = String::from(s).into_bytes();
+      english_score(&v)
+    }
+
+    #[test]
+    fn double_decrypt() {
+      let orig = String::from("1234").into_bytes();
+      let d = decrypt(orig.clone(), 138);
+      let p = decrypt(d, 138);
+      assert_eq!(orig, p)
+    }
+
+    #[test]
+    fn scores_english() {
+      assert!(string_score("some words") > 0);
+      assert!(string_score("some words") > string_score("zxcvb"));
+      assert!(string_score(";;;;;") == 1)
     }
 
   }
