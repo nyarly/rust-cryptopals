@@ -6,13 +6,14 @@ use super::utils::*;
 fn detect_xor(path: &str) -> Option<String> {
   File::open(path).ok().and_then(|f| {
     let fr = BufReader::new(f);
-    best_score(fr.lines()
+    let scored_lines = fr.lines()
                .filter_map(|l| l.ok())
                .flat_map(|line| {
+                 let lb = &(line.to_owned().into_bytes());
                  (0..255).map(|c| {
-                   scored_decrypt(&line.to_owned().into_bytes(), c)
+                   scored_decrypt(lb, c)
                  })
-               }))
-      .and_then(|(_, best)| String::from_utf8(best).ok())
+               });
+    best_score(scored_lines).and_then(|(_, best)| String::from_utf8(best).ok())
   })
 }
