@@ -19,8 +19,8 @@
 pub fn best_decrypt(encrypted: &str) -> Vec<u8> {
   let cstr = hex2bytes(encrypted).unwrap();
 
-  let (_, best) = best_score((0..255).map(|c| scored_decrypt(cstr.clone(), c)))
-    .unwrap_or_else(|| (0, decrypt(cstr.clone(), b'0')));
+  let (_, best) = best_score((0..255).map(|c| scored_decrypt(&cstr, c)))
+    .unwrap_or_else(|| (0, decrypt(&cstr, b'0')));
   best
 }
 

@@ -24,8 +24,8 @@ mod utils {
     Ok(uint)
   }
 
-  pub fn scored_decrypt(crypted: Vec<u8>, key: u8) -> (u32, Vec<u8>) {
-    let trial = decrypt(crypted.clone(), key);
+  pub fn scored_decrypt(crypted: &[u8], key: u8) -> (u32, Vec<u8>) {
+    let trial = decrypt(crypted, key);
     (english_score(&trial), trial)
   }
 
@@ -46,23 +46,22 @@ mod utils {
       }
     }
 
-  pub fn xor_iters<I,J,V>(pvec: I, kvec: J) -> I
-    where I: IntoIterator<Item=V>+FromIterator<<V as BitXor>::Output>,
+  pub fn xor_iters<I,J,K,V>(pvec: I, kvec: J) -> K
+    where I: IntoIterator<Item=V>,
           J: IntoIterator<Item=V>,
+          K: FromIterator<<V as BitXor>::Output>,
           V: BitXor {
             pvec.into_iter()
               .zip(kvec)
-              .map(|(p,k)|
-                   p ^ k
-                  )
+              .map(|(p,k)| p ^ k)
               .collect()
           }
 
-  pub fn decrypt(crypted: Vec<u8>, key: u8) -> Vec<u8> {
-    xor_iters(crypted, iter::repeat(key))
+  pub fn decrypt(crypted: &[u8], key: u8) -> Vec<u8> {
+    xor_iters(crypted, iter::repeat(&key))
   }
 
-  pub fn english_score(bytes: &Vec<u8>) -> u32 {
+  pub fn english_score(bytes: &[u8]) -> u32 {
     bytes.iter()
       .fold(1, |score, letter|
             if score == 0 {
@@ -110,8 +109,8 @@ mod utils {
     #[test]
     fn double_decrypt() {
       let orig = String::from("1234").into_bytes();
-      let d = decrypt(orig.clone(), 138);
-      let p = decrypt(d, 138);
+      let d = decrypt(&orig, 138);
+      let p = decrypt(&d, 138);
       assert_eq!(orig, p)
     }
 
