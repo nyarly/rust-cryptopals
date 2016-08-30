@@ -24,6 +24,10 @@ mod utils {
     Ok(uint)
   }
 
+  pub fn full_u8() -> Box<Iterator<Item=u8>> {
+    Box::new((0..128).chain((0..128).map(|n| n+128)))
+  }
+
   pub fn scored_decrypt(crypted: &[u8], key: u8) -> (u32, Vec<u8>) {
     let trial = decrypt(crypted, key);
     (english_score(&trial), trial)
@@ -68,20 +72,20 @@ mod utils {
               0
             } else {
               match *letter {
-                b' ' =>  score + 13 ,
-                b'e'|b'E' => score + 13,
-                b't'|b'T' => score + 12,
-                b'a'|b'A' => score + 11,
-                b'o'|b'O' => score + 10,
-                b'i'|b'I' => score + 9,
-                b'n'|b'N' => score + 8,
-                b's'|b'S' => score + 7,
-                b'h'|b'H' => score + 6,
-                b'r'|b'R' => score + 5,
-                b'd'|b'D' => score + 4,
-                b'l'|b'L' => score + 3,
-                b'c'|b'C' => score + 2,
-                b'u'|b'U' => score + 1,
+                b' ' =>  score + 130,
+                b'e'|b'E' => score + 127,
+                b't'|b'T' => score + 90,
+                b'a'|b'A' => score + 81,
+                b'o'|b'O' => score + 75,
+                b'i'|b'I' => score + 69,
+                b'n'|b'N' => score + 67,
+                b's'|b'S' => score + 63,
+                b'h'|b'H' => score + 60,
+                b'r'|b'R' => score + 59,
+                b'd'|b'D' => score + 42,
+                b'l'|b'L' => score + 40,
+                b'c'|b'C' => score + 27,
+                b'u'|b'U' => score + 27,
                 b' '...b'~' => score,
                 _ =>  0,
               }
@@ -99,6 +103,11 @@ mod utils {
     #[test]
     fn can_bigint_from_hex() {
       assert_eq!( BigInt::to_u32(&super::hex2bigint("a7").unwrap()).unwrap(), 167)
+    }
+
+    #[test]
+    fn full_u8_is_goes_to_255() {
+      assert_eq!(full_u8().last().unwrap(), 255u8)
     }
 
     fn string_score(s: &str) -> u32 {

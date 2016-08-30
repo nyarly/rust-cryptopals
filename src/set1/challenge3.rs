@@ -16,19 +16,11 @@
 ///   "Cooking MC's like a pound of bacon"
 /// )
 /// ```
+use super::utils::*;
 pub fn best_decrypt(encrypted: &str) -> Vec<u8> {
   let cstr = hex2bytes(encrypted).unwrap();
 
-  let (_, best) = best_score((0..255).map(|c| scored_decrypt(&cstr, c)))
+  let (_, best) = best_score(full_u8().map(|c| scored_decrypt(&cstr, c)))
     .unwrap_or_else(|| (0, decrypt(&cstr, b'0')));
   best
-}
-
-use super::utils::*;
-use std::iter;
-
-#[cfg(test)]
-mod test {
-  use super::*;
-
 }
