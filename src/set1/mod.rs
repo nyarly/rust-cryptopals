@@ -76,7 +76,7 @@ mod utils {
                 b'e'|b'E' => score + 127,
                 b't'|b'T' => score + 90,
                 b'a'|b'A' => score + 81,
-                b'o'|b'O' => score + 75,
+                b'o'|b'O'|b'\n'|b'\t'|b'\r' => score + 75,
                 b'i'|b'I' => score + 69,
                 b'n'|b'N' => score + 67,
                 b's'|b'S' => score + 63,

@@ -9,7 +9,7 @@ use super::utils::*;
 /// # use cryptopals::set1::challenge4::detect_xor;
 /// assert_eq!(
 ///   detect_xor("s3c4-data.txt").unwrap(),
-///   "dunno yet"
+///   "Now that the party is jumping\n"
 /// )
 /// ```
 pub fn detect_xor(path: &str) -> Option<String> {
@@ -20,11 +20,11 @@ pub fn detect_xor(path: &str) -> Option<String> {
                .filter_map(|l| hex2bytes(&l).ok())
                .flat_map(|line| {
                  full_u8().map(move |c| {
-                   let sd = scored_decrypt(&line, c);
-                   let (sc, ref st) = sd;
-                   println!("{} {}", sc, String::from_utf8(*st).unwrap_or(String::from("ICK"))); sd
+                   let sd = scored_decrypt(&line, c); sd
                  })
                });
-    best_score(scored_lines).and_then(|(_, best)| String::from_utf8(best).ok())
+    best_score(scored_lines).and_then(|(_, best)| {
+      String::from_utf8(best).ok()
+    })
   })
 }
