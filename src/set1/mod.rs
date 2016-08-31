@@ -2,8 +2,10 @@ pub mod challenge1;
 pub mod challenge2;
 pub mod challenge3;
 pub mod challenge4;
+pub mod challenge5;
 
-mod utils {
+// ICK with the pub here
+pub mod utils {
   use num_bigint::BigInt;
   use serialize::base64::{STANDARD,ToBase64};
   use std::ops::BitXor;
