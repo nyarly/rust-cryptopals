@@ -2,7 +2,7 @@ use super::utils::*;
 /// # Examples
 /// ```
 /// # use cryptopals::set1::challenge5::repeating_key_xor;
-/// # use cryptopals::set1::utils::hex2bytes;
+/// # use cryptopals::byte_convert::hex2bytes;
 ///
 /// assert_eq!(
 ///   repeating_key_xor("Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal", "ICE").unwrap(),

@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{BufRead,BufReader};
 use super::utils::*;
+use ::byte_convert::*;
 /// One of the 60-character strings in this file has been encrypted by single-character XOR.
 /// Observe:
 ///

@@ -16,6 +16,7 @@
 ///   "Cooking MC's like a pound of bacon"
 /// )
 /// ```
+use ::byte_convert::*;
 use super::utils::*;
 pub fn best_decrypt(encrypted: &str) -> Vec<u8> {
   let cstr = hex2bytes(encrypted).unwrap();

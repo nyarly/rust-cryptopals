@@ -1,4 +1,4 @@
-use super::utils::*;
+use ::byte_convert::*;
 
 pub fn hex2base64(hex: &str) -> Result<String, &'static str> {
   hex2bigint(hex).and_then(|num| bigint2base64(num))
