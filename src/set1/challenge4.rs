@@ -13,19 +13,22 @@ use ::byte_convert::*;
 ///   "Now that the party is jumping\n"
 /// )
 /// ```
+
+use super::best_decrypt;
+use super::frequency::isomorph_score;
+
 pub fn detect_xor(path: &str) -> Option<String> {
   File::open(path).ok().and_then(|f| {
     let fr = BufReader::new(f);
     let scored_lines = fr.lines()
                .filter_map(|l| l.ok())
                .filter_map(|l| hex2bytes(&l).ok())
-               .flat_map(|line| {
-                 full_u8().map(move |c| {
-                   let sd = scored_decrypt(&line, c); sd
-                 })
+               .map(|line| {
+                 (isomorph_score(&line), line)
                });
-    best_score(scored_lines).and_then(|(_, best)| {
-      String::from_utf8(best).ok()
+    best_score(scored_lines).and_then(|(score, best)| {
+      println!("{} {:?}", score, best);
+      String::from_utf8(best_decrypt(&best)).ok()
     })
   })
 }

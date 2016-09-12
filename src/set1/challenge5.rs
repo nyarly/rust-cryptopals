@@ -1,4 +1,5 @@
 use super::utils::*;
+use super::xor::*;
 /// # Examples
 /// ```
 /// # use cryptopals::set1::challenge5::repeating_key_xor;
