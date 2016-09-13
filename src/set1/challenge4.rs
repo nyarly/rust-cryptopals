@@ -16,6 +16,8 @@ use ::byte_convert::*;
 
 use super::best_decrypt;
 use super::frequency::isomorph_score;
+use super::frequency::most_frequent;
+use super::xor::scored_decrypt;
 
 pub fn detect_xor(path: &str) -> Option<String> {
   File::open(path).ok().and_then(|f| {
@@ -26,9 +28,16 @@ pub fn detect_xor(path: &str) -> Option<String> {
                .map(|line| {
                  (isomorph_score(&line), line)
                });
-    best_score(scored_lines).and_then(|(score, best)| {
-      println!("{} {:?}", score, best);
-      String::from_utf8(best_decrypt(&best)).ok()
-    })
+
+    let ranked =  by_score(scored_lines);
+    let (match_score, _) = ranked[0];
+    best_score(ranked.into_iter()
+      .take_while(|&(score, _)| score - match_score < 2)
+      .filter_map(|(_,  line)| {
+        best_score(most_frequent(&line).iter().take(3).map(|c| {
+          scored_decrypt(&line, *c ^ b' ')
+        }))
+      }))
+    .and_then(|(_score, best)| String::from_utf8(best).ok())
   })
 }

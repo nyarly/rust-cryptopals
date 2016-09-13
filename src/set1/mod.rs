@@ -48,8 +48,14 @@ mod frequency {
   pub fn isomorph_score(bytes: &[u8]) -> u32 {
     let fc = frequency_counts(bytes);
     let score = rmsd(sorted_counts(fc), sorted_counts(english_freqs()));
-    println!("= {}\n", score);
     score
+  }
+
+  pub fn most_frequent(bytes: &[u8]) -> Vec<u8> {
+    let fc = frequency_counts(bytes);
+    let mut s = fc.iter().collect::<Vec<_>>();
+    s.sort_by(|&(_, l), &(_, r)| r.cmp(l));
+    s.iter().map(|&(k,_)| k).cloned().collect()
   }
 
   fn sorted_counts(unsorted: BTreeMap<u8,u32>) -> Vec<u32> {
@@ -59,10 +65,12 @@ mod frequency {
   }
 
   fn rmsd<I>(left: I, right: I) -> u32 where I: IntoIterator<Item=u32> + Clone {
-    println!("{:?} vs \n{:?}", left.clone().into_iter().collect::<Vec<_>>(), right.clone().into_iter().collect::<Vec<_>>());
+    //println!("{:?} vs \n{:?}", left.clone().into_iter().collect::<Vec<_>>(), right.clone().into_iter().collect::<Vec<_>>());
     let sod = squares_of_differences(left, right);
     (sod.iter().fold(0, |acc, n| acc + n) as f64 / sod.len() as f64).sqrt() as u32
   }
+
+
 
   fn frequency_counts(bytes: &[u8]) -> BTreeMap<u8,u32> {
     let mut fc = BTreeMap::new();
@@ -158,6 +166,16 @@ mod utils {
           S: Ord + Clone
     { list.min_by_key(|&(ref score,_)| score.clone()) }
 
+  pub fn by_score<I, S, V>(list: I) -> Vec<(S, V)>
+    where I: Iterator<Item=(S, V)>,
+          S: Ord + Clone,
+          V: Clone
+          {
+            let mut v = list.collect::<Vec<_>>();
+            v.sort_by_key(|&(ref score, _)| score.clone());
+            v
+          }
+
   #[cfg(test)]
   mod tests {
     use super::*;
@@ -174,7 +192,7 @@ mod xor {
   pub fn scored_decrypt(crypted: &[u8], key: u8) -> (u32, Vec<u8>) {
     let trial = decrypt(crypted, key);
     let score =super::frequency::english_score(&trial);
-    println!("{:?} {:?}", score, String::from_utf8(trial.clone()).unwrap_or(String::from("no")));
+    //println!("{:?} {:?}", score, String::from_utf8(trial.clone()).unwrap_or(String::from("no")));
     (score, trial)
   }
 
