@@ -1,4 +1,3 @@
-use super::utils::*;
 use super::xor::*;
 /// # Examples
 /// ```

@@ -8,3 +8,4 @@ publish = false
 num = "0.1.35"
 num-bigint = "0.1.35"
 rustc-serialize = "0.3"
+lazy_static = "0.2.1"
