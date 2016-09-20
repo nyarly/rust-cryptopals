@@ -165,7 +165,7 @@ mod frequency {
 
   // XXX consider Chi-square?
   fn rmsd<I>(left: I, right: I) -> u32 where I: IntoIterator<Item=u32> + Clone {
-    println!("{:?} vs \n{:?}", left.clone().into_iter().collect::<Vec<_>>(), right.clone().into_iter().collect::<Vec<_>>());
+    //println!("{:?} vs \n{:?}", left.clone().into_iter().collect::<Vec<_>>(), right.clone().into_iter().collect::<Vec<_>>());
     let sod = squares_of_differences(left, right);
     (sod.iter().fold(0, |acc, n| acc + n) as f64 / sod.len() as f64).sqrt() as u32
   }

@@ -1,22 +1,86 @@
+use std::fmt;
+use std::string;
+use std::error;
 use std::fs::File;
-use std::io::{BufRead,BufReader};
+use std::io::{BufReader,Read,self};
 use super::utils::*;
-use ::byte_convert::*;
 use super::frequency::Counts;
 use super::frequency::ENGLISH_FREQS;
-use super::xor;
-use ::byte_convert::*;
+use ::serialize::base64::{self,FromBase64};
 
-fn crack_repeating_key_xor() -> Result(String) {
-  let file = try!(File::open("s1c6.txt"));
-  let buf = BufReader::new(file);
-  let crypted = base642bytes(buf);
+#[derive(Debug)]
+pub enum CrackError {
+  Io(io::Error),
+  Base64(base64::FromBase64Error),
+  Utf8(string::FromUtf8Error),
+  Str(&'static str),
+}
 
-  let keysize = pick_keysize(crypted);
-  let key = (0..keysize).map(|offset| {
-    try!(key_for_slice(crypted, offset).ok())
-  }).collect();
-  (keysize, key, try!(repeating_key_xor(crypted, key)))
+impl fmt::Display for CrackError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match *self {
+      CrackError::Io(ref e) => write!(f, "IO: {}", e),
+      CrackError::Base64(ref e) => write!(f, "Base64: {}", e),
+      CrackError::Utf8(ref e) => write!(f, "Utf8: {}", e),
+      CrackError::Str(ref e) => write!(f, "{}", e),
+    }
+  }
+}
+
+impl error::Error for CrackError {
+  fn description(&self) -> &str {
+    match *self {
+      CrackError::Io(ref e) => e.description(),
+      CrackError::Base64(ref e) => e.description(),
+      CrackError::Utf8(ref e) => e.description(),
+      CrackError::Str(ref e) => e,
+    }
+  }
+
+  fn cause(&self) -> Option<&error::Error> {
+    match *self {
+      CrackError::Io(ref e) => Some(e),
+      CrackError::Base64(ref e) => Some(e),
+      CrackError::Utf8(ref e) => Some(e),
+      CrackError::Str(_) => None,
+    }
+  }
+}
+
+impl From<io::Error> for CrackError { fn from(e: io::Error) -> CrackError { CrackError::Io(e) } }
+impl From<base64::FromBase64Error> for CrackError { fn from(e: base64::FromBase64Error) -> CrackError { CrackError::Base64(e) } }
+impl From<string::FromUtf8Error> for CrackError { fn from(e: string::FromUtf8Error) -> CrackError { CrackError::Utf8(e) } }
+impl From<&'static str> for CrackError { fn from(e: &'static str) -> CrackError { CrackError::Str(e) } }
+
+
+/// There's a file here. It's been base64'd after being encrypted with repeating-key XOR.
+///
+/// Decrypt it.
+/// Here's how:
+/// # Examples
+/// ```
+/// use ::cryptopals::set1::challenge6::crack_repeating_key_xor;
+/// let answer = crack_repeating_key_xor("s1c6.txt").unwrap();
+/// let (keysize, key, result) = answer;
+/// for ch in result.as_bytes().chunks(keysize) {
+///   println!("{:?}", String::from_utf8_lossy(ch))
+/// }
+/// assert_eq!(keysize, 5);
+/// assert_eq!(key, String::from("i n n"));
+/// assert_eq!(result, String::from("another thing"))
+pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String),CrackError> {
+  let file = try!(File::open(path));
+  let mut buf = BufReader::new(file);
+  let mut b64bytes = Vec::new();
+  try!(buf.read_to_end(&mut b64bytes));
+
+  let crypted = try!(b64bytes.from_base64());
+
+  let keysize = try!(pick_keysize(&crypted));
+  let key = try!(String::from_utf8((0..keysize).map(|offset| {
+    key_for_slice(&crypted, offset, keysize).unwrap()
+  }).collect()));
+  Ok((keysize, key.clone(), try!(super::challenge5::repeating_key_xor(&try!(String::from_utf8(crypted)), &key).ok_or("empty crypt"))))
 }
 
 fn hamming(left: &str, right: &str) -> u32 {
@@ -25,25 +89,40 @@ fn hamming(left: &str, right: &str) -> u32 {
   })
 }
 
-fn pick_keysize(crypted: &[u8]) -> u32 {
-  best_score((2..40).iter().map(|a_keysize| {
-    chunks = crypted.chunks(a_keysize);
-    let a = chunks.next();
-    (chunks.take(3).fold(0, |acc, chunk| acc + hamming(a, chunk)) as f64 / a_keysize as f64, keysize)
-  }))
+fn pick_keysize(crypted: &[u8]) -> Result<usize, CrackError> {
+  best_score((2..40).map(|a_keysize| {
+    let mut chunks = crypted.chunks(a_keysize);
+    let a = chunks.next().unwrap();
+    let pair = (
+      ((chunks
+        .take(3)
+        .fold(0, |acc, chunk| acc + hamming(&String::from_utf8(a.to_vec()).unwrap(), &String::from_utf8(chunk.to_vec()).unwrap())) as f64 / a_keysize as f64) *100.0) as u32,
+      a_keysize);
+    println!("{:?}", pair);
+    pair
+  })).map(|(_sc, ks)| ks).ok_or(CrackError::Str("empty keysize range"))
 }
 
-fn key_for_slice(crypted: &[u8], offset: usize) -> Option<u8> {
+fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
     let sliced = crypted
+      .iter()
       .enumerate()
-      .filter_map(|(i, c)|
+      .filter_map(|(i, ref c)|
+                  if i % keysize == offset {
+                    Some(*c)
+                  } else {
+                    None
+                  }
+                  /*
                   match i % keysize {
-                    offset => Some(c),
+                    offset => Some(*c),
                     _ => None
-                  });
-    Count::new(sliced)
+                  }
+                  */
+                  );
+    Counts::new(sliced)
       .most_congruent_item(&(*ENGLISH_FREQS), 0, |a,b| a^b)
-      .map(|(sc, key)| key)
+      .map(|(_sc, key)| key)
 }
 
 #[cfg(test)]
