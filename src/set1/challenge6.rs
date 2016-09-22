@@ -80,7 +80,10 @@ pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String),Cra
   let key = try!(String::from_utf8((0..keysize).map(|offset| {
     key_for_slice(&crypted, offset, keysize).unwrap()
   }).collect()));
-  Ok((keysize, key.clone(), try!(super::challenge5::repeating_key_xor(&try!(String::from_utf8(crypted)), &key).ok_or("empty crypt"))))
+  let cryptstr = try!( String::from_utf8(crypted));
+  Ok((keysize, key.clone(), try!(
+        super::challenge5::repeating_key_xor(&cryptstr, &key).ok_or("empty crypt")
+        )))
 }
 
 fn hamming(left: &str, right: &str) -> u32 {

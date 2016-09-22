@@ -38,6 +38,8 @@ pub fn best_decrypt(cstr: &[u8]) -> Vec<u8> {
 
 mod frequency {
   use std::collections::btree_map::BTreeMap;
+  use std::{iter,ops};
+  use std::fmt::Display;
 
   #[derive(Clone)]
   pub struct Counts<T> {
@@ -74,11 +76,6 @@ mod frequency {
         let entry = fc.entry(*it).or_insert(0);
         *entry += 1;
         count += 1
-      }
-
-      let factor = 1000.0 / count as f64;
-      for (_, count) in fc.iter_mut() {
-        *count = (*count as f64 * factor) as u32
       }
 
       Counts{
@@ -118,11 +115,11 @@ mod frequency {
     }
 
     pub fn congruent_score(&self, other: &Counts<T>) -> u32 {
-      rmsd(self.congruent_to(other).counts(), other.counts())
+      chisquare(self.congruent_to(other).counts(), self.total, other.counts(), other.total)
     }
 
     pub fn isomorph_score(&self, other: &Counts<T>) -> u32 {
-      rmsd(self.sorted_counts(), other.sorted_counts())
+      chisquare(self.sorted_counts(), self.total, other.sorted_counts(), other.total)
     }
 
     fn counts(&self) -> Vec<u32> {
@@ -160,19 +157,47 @@ mod frequency {
     //let fc = frequency_counts(bytes);
     let fc = Counts::new(bytes);
 
-    rmsd(fc.congruent_to(&(*ENGLISH_FREQS)).counts(), (*ENGLISH_FREQS).counts())
+    chisquare(fc.congruent_to(&(*ENGLISH_FREQS)).counts(), fc.total, (*ENGLISH_FREQS).counts(), (*ENGLISH_FREQS).total)
   }
 
+  fn chisquare<I>(observed: I, obtot: u32, expected: I, extot: u32) -> u32
+    where I: IntoIterator<Item=u32> + Clone {
+    let factor = obtot as f64 / extot as f64;
+    let exs = expected.into_iter().map(|e| e as f64 * factor).collect::<Vec<f64>>();
+    let obs = observed.into_iter().map(|o| o as f64).chain(iter::repeat(0.0));
+    let sod = squares_of_differences(obs, exs.clone());
+    (sod.iter().zip(exs).map(|(sd, ex)| {
+      let quotient = sd / ex;
+      //println!("{} {} {}", sd, ex, (sd/ex));
+      quotient
+    }).fold(0.0, |acc, n| {
+      let sum = acc + n;
+      //println!("sum: {} {}", n, sum);
+      sum
+    }) * 100.0) as u32
+  }
+
+  /*
   // XXX consider Chi-square?
   fn rmsd<I>(left: I, right: I) -> u32 where I: IntoIterator<Item=u32> + Clone {
     //println!("{:?} vs \n{:?}", left.clone().into_iter().collect::<Vec<_>>(), right.clone().into_iter().collect::<Vec<_>>());
     let sod = squares_of_differences(left, right);
     (sod.iter().fold(0, |acc, n| acc + n) as f64 / sod.len() as f64).sqrt() as u32
   }
+  */
 
-  fn squares_of_differences<I: IntoIterator<Item=u32>>(left: I, right: I) -> Vec<u32> {
+  fn squares_of_differences<L , R, J, D, P>(left: L, right: R) -> Vec<P>
+    where L: IntoIterator<Item=J>,
+          R: IntoIterator<Item=J>,
+          J: ops::Sub<Output=D> + Display + Copy,
+          D: ops::Mul<Output=P> + Copy,
+          P: Display
+  {
     left.into_iter().zip(right.into_iter())
-      .map(|(l,r)| (l as i32 - r as i32).pow(2) as u32)
+      .map(|(l,r)| {
+        let d = l - r; let sod = d * d;
+        //println!("({} - {})**2 = {}", l, r, sod);
+        sod})
       .collect()
   }
 
@@ -186,10 +211,11 @@ mod frequency {
 
     #[test]
     fn scores_english() {
-      assert!(string_score("some words") > 0,
+      assert!(string_score("") == 0, "empty is {}");
+      assert!(string_score("some words") < 100000,
               "some words = {}", string_score("some_words"));
-      assert!(string_score("some words") < string_score("zxcvb"),
-              "'some words' = {} 'zxcvb' = {}", string_score("some words"), string_score("zxcvb"));
+      assert!(string_score("some words") < string_score("zxcvbzxcvb"),
+              "'some words' = {} 'zxcvbzxcvb' = {}", string_score("some words"), string_score("zxcvb"));
       assert!(string_score(";;;;;") > 71, "';;;;;' = {}", string_score(";;;;;"))
     }
 
