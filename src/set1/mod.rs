@@ -168,11 +168,11 @@ mod frequency {
     let sod = squares_of_differences(obs, exs.clone());
     (sod.iter().zip(exs).map(|(sd, ex)| {
       let quotient = sd / ex;
-      println!("{} {} {}", sd, ex, (sd/ex));
+      //println!("{} {} {}", sd, ex, quotient);
       quotient
     }).fold(0.0, |acc, n| {
       let sum = acc + n;
-      println!("sum: {} {}", n, sum);
+      //println!("sum: {} {}", n, sum);
       sum
     }) * 100.0) as u32
   }
@@ -196,7 +196,7 @@ mod frequency {
     left.into_iter().zip(right.into_iter())
       .map(|(l,r)| {
         let d = l - r; let sod = d * d;
-        println!("({} - {})**2 = {}", l, r, sod);
+        //println!("({} - {})**2 = {}", l, r, sod);
         sod})
       .collect()
   }

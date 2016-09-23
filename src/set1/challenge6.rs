@@ -63,7 +63,7 @@ impl From<&'static str> for CrackError { fn from(e: &'static str) -> CrackError 
 /// let answer = crack_repeating_key_xor("s1c6.txt").unwrap();
 /// let (keysize, key, result) = answer;
 /// for ch in result.as_bytes().chunks(keysize) {
-///   println!("{:?}", String::from_utf8_lossy(ch))
+///   //println!("{:?}", String::from_utf8_lossy(ch))
 /// }
 /// assert_eq!(keysize, 5);
 /// assert_eq!(key, String::from("i n n"));
@@ -101,7 +101,7 @@ fn pick_keysize(crypted: &[u8]) -> Result<usize, CrackError> {
         .take(3)
         .fold(0, |acc, chunk| acc + hamming(&String::from_utf8(a.to_vec()).unwrap(), &String::from_utf8(chunk.to_vec()).unwrap())) as f64 / a_keysize as f64) *100.0) as u32,
       a_keysize);
-    println!("{:?}", pair);
+    //println!("{:?}", pair);
     pair
   })).map(|(_sc, ks)| ks).ok_or(CrackError::Str("empty keysize range"))
 }
