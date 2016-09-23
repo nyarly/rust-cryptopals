@@ -212,7 +212,7 @@ mod frequency {
     #[test]
     fn scores_english() {
       assert!(string_score("") == 0, "empty is {}");
-      assert!(string_score("Defend the east wall of the castle") - 1852 < 4, "practical cryptography example = {}", string_score("Defend the east wall of the castle"));
+      assert!(string_score("Defend the east wall of the castle") - 4505 < 4, "practical cryptography example = {}", string_score("Defend the east wall of the castle"));
       assert!(string_score("some words") < 100000,
               "some words = {}", string_score("some_words"));
       assert!(string_score("some words") < string_score("zxcvbzxcvb"),
