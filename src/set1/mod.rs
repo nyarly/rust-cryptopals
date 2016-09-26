@@ -41,7 +41,7 @@ mod frequency {
   use std::{iter,ops};
   use std::fmt::Display;
 
-  #[derive(Clone)]
+  #[derive(Clone, Debug)]
   pub struct Counts<T> {
     counts: BTreeMap<T, u32>,
     total: u32
@@ -99,7 +99,8 @@ mod frequency {
     };
   }
 
-  impl<T: Ord + Clone + Copy> Counts<T> {
+  use std::fmt::Debug;
+  impl<T: Ord + Clone + Copy + Debug> Counts<T> {
     pub fn new<'g, L>(list: L) -> Counts<T> where L: IntoIterator<Item=&'g T>, T: 'g + Copy {
       let mut fc = BTreeMap::new();
       let mut count = 0;
@@ -146,11 +147,10 @@ mod frequency {
     }
 
     pub fn congruent_score(&self, other: &Counts<T>) -> u32 {
-      chisquare(self.congruent_to(other).counts(), self.total, other.counts(), other.total) +
-        self.penalty(&(*ENGLISH_PENALTIES))
+      chisquare(self.congruent_to(other).counts(), self.total, other.counts(), other.total)
     }
 
-    fn penalty(&self, ps: &Penalizer<T>) -> u32 {
+    pub fn penalty(&self, ps: &Penalizer<T>) -> u32 {
       self.counts.iter().fold(0, |acc, (key, count)| {
         acc + ps.applied(*key) * count
       })
@@ -181,12 +181,13 @@ mod frequency {
         .cloned().collect()
     }
 
-    pub fn most_congruent_item<F: Fn(T, T) -> T>(&self, against: &Counts<T>, threshold: u32, xform: F) -> Option<(u32, T)> {
+
+    pub fn most_congruent_item<F: Fn(T, T) -> T>(&self, against: &Counts<T>, penalties: &Penalizer<T>, threshold: u32, xform: F) -> Option<(u32, T)> {
       let anchor = against.most_frequent(0)[0];
       super::utils::best_score(self.most_frequent(threshold).iter().map(|c| {
         let proposed_key = xform(*c, anchor);
-        ((self.transformed(|i| xform(i, proposed_key))).congruent_score(against),
-        proposed_key)
+        let xformed = self.transformed(|i| xform(i, proposed_key));
+       (xformed.congruent_score(against) + xformed.penalty(penalties), proposed_key)
       }))
     }
   }
@@ -195,7 +196,7 @@ mod frequency {
     //let fc = frequency_counts(bytes);
     let fc = Counts::new(bytes);
 
-    chisquare(fc.congruent_to(&(*ENGLISH_FREQS)).counts(), fc.total, (*ENGLISH_FREQS).counts(), (*ENGLISH_FREQS).total)
+    fc.congruent_score(&(*ENGLISH_FREQS)) + fc.penalty(&(*ENGLISH_PENALTIES))
   }
 
   fn chisquare<I>(observed: I, obtot: u32, expected: I, extot: u32) -> u32
@@ -266,9 +267,11 @@ mod utils {
     Box::new((0..128).chain((0..128).map(|n| n+128)))
   }
 
+  use std::fmt::Debug;
   pub fn best_score<I, S, V>(list: I) -> Option<(S, V)>
     where I: Iterator<Item=(S, V)>,
-          S: Ord + Clone
+          S: Ord + Clone + Debug,
+          V: Debug
           { list.min_by_key(|&(ref score,_)| score.clone()) }
 
   pub fn by_score<I, S, V>(list: I) -> Vec<(S, V)>

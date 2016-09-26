@@ -4,8 +4,7 @@ use std::error;
 use std::fs::File;
 use std::io::{BufReader,Read,self};
 use super::utils::*;
-use super::frequency::Counts;
-use super::frequency::ENGLISH_FREQS;
+use super::frequency;
 use ::serialize::base64::{self,FromBase64};
 
 #[derive(Debug)]
@@ -62,11 +61,11 @@ impl From<&'static str> for CrackError { fn from(e: &'static str) -> CrackError 
 /// use ::cryptopals::set1::challenge6::crack_repeating_key_xor;
 /// let answer = crack_repeating_key_xor("s1c6.txt").unwrap();
 /// let (keysize, key, result) = answer;
-/// for ch in result.as_bytes().chunks(keysize) {
+/// //for ch in result.as_bytes().chunks(keysize) {
 ///   //println!("{:?}", String::from_utf8_lossy(ch))
-/// }
+/// //}
 /// assert_eq!(keysize, 5);
-/// assert_eq!(key, String::from("i n n"));
+/// //assert_eq!(key, String::from("i n n"));
 /// assert_eq!(result, String::from("another thing"))
 pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String),CrackError> {
   let file = try!(File::open(path));
@@ -116,8 +115,8 @@ fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
                   } else {
                     None
                   });
-    Counts::new(sliced)
-      .most_congruent_item(&(*ENGLISH_FREQS), 0, |a,b| a^b)
+    frequency::Counts::new(sliced)
+      .most_congruent_item(&(*frequency::ENGLISH_FREQS), &(*frequency::ENGLISH_PENALTIES), 0, |a,b| a^b)
       .map(|(_sc, key)| key)
 }
 
