@@ -115,14 +115,7 @@ fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
                     Some(*c)
                   } else {
                     None
-                  }
-                  /*
-                  match i % keysize {
-                    offset => Some(*c),
-                    _ => None
-                  }
-                  */
-                  );
+                  });
     Counts::new(sliced)
       .most_congruent_item(&(*ENGLISH_FREQS), 0, |a,b| a^b)
       .map(|(_sc, key)| key)

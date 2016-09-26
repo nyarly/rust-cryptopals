@@ -48,6 +48,16 @@ mod frequency {
   }
 
 
+  pub struct Penalizer<T> {
+    penalties: BTreeMap<T, u32>,
+  }
+
+  impl <T: Ord> Penalizer<T> {
+    pub fn applied(&self, val: T) -> u32 {
+      *self.penalties.get(&val).unwrap_or(&0)
+    }
+  }
+
   lazy_static! {
     pub static ref ENGLISH_FREQS: Counts<u8> = {
       let mut ef = BTreeMap::new();
@@ -64,6 +74,27 @@ mod frequency {
       Counts{
         counts: ef,
         total: 1000,
+      }
+    };
+  }
+
+  lazy_static!{
+    pub static ref ENGLISH_PENALTIES: Penalizer<u8> = {
+      let mut pm = BTreeMap::new();
+      for c in 0..9 {
+        pm.insert(c, 100);
+      }
+      for c in 14..32 {
+        pm.insert(c, 100);
+      }
+      for c in 128..166 {
+        pm.insert(c, 5);
+      }
+      for c in 166..255 {
+        pm.insert(c, 15);
+      }
+      Penalizer{
+        penalties: pm
       }
     };
   }
@@ -115,8 +146,16 @@ mod frequency {
     }
 
     pub fn congruent_score(&self, other: &Counts<T>) -> u32 {
-      chisquare(self.congruent_to(other).counts(), self.total, other.counts(), other.total)
+      chisquare(self.congruent_to(other).counts(), self.total, other.counts(), other.total) +
+        self.penalty(&(*ENGLISH_PENALTIES))
     }
+
+    fn penalty(&self, ps: &Penalizer<T>) -> u32 {
+      self.counts.iter().fold(0, |acc, (key, count)| {
+        acc + ps.applied(*key) * count
+      })
+    }
+
 
     pub fn isomorph_score(&self, other: &Counts<T>) -> u32 {
       chisquare(self.sorted_counts(), self.total, other.sorted_counts(), other.total)
@@ -152,7 +191,6 @@ mod frequency {
     }
   }
 
-  // lower is better now
   pub fn english_score(bytes: &[u8]) -> u32 {
     //let fc = frequency_counts(bytes);
     let fc = Counts::new(bytes);
@@ -162,65 +200,65 @@ mod frequency {
 
   fn chisquare<I>(observed: I, obtot: u32, expected: I, extot: u32) -> u32
     where I: IntoIterator<Item=u32> + Clone {
-    let factor = obtot as f64 / extot as f64;
-    let exs = expected.into_iter().map(|e| e as f64 * factor).collect::<Vec<f64>>();
-    let obs = observed.into_iter().map(|o| o as f64).chain(iter::repeat(0.0));
-    let sod = squares_of_differences(obs, exs.clone());
-    (sod.iter().zip(exs).map(|(sd, ex)| {
-      let quotient = sd / ex;
-      //println!("{} {} {}", sd, ex, quotient);
-      quotient
-    }).fold(0.0, |acc, n| {
-      let sum = acc + n;
-      //println!("sum: {} {}", n, sum);
-      sum
-    }) * 100.0) as u32
-  }
+      let factor = obtot as f64 / extot as f64;
+      let exs = expected.into_iter().map(|e| e as f64 * factor).collect::<Vec<f64>>();
+      let obs = observed.into_iter().map(|o| o as f64).chain(iter::repeat(0.0));
+      let sod = squares_of_differences(obs, exs.clone());
+      (sod.iter().zip(exs).map(|(sd, ex)| {
+        let quotient = sd / ex;
+        //println!("{} {} {}", sd, ex, quotient);
+        quotient
+      }).fold(0.0, |acc, n| {
+        let sum = acc + n;
+        //println!("sum: {} {}", n, sum);
+        sum
+      }) * 100.0) as u32
+    }
 
   /*
   // XXX consider Chi-square?
   fn rmsd<I>(left: I, right: I) -> u32 where I: IntoIterator<Item=u32> + Clone {
-    //println!("{:?} vs \n{:?}", left.clone().into_iter().collect::<Vec<_>>(), right.clone().into_iter().collect::<Vec<_>>());
-    let sod = squares_of_differences(left, right);
-    (sod.iter().fold(0, |acc, n| acc + n) as f64 / sod.len() as f64).sqrt() as u32
+//println!("{:?} vs \n{:?}", left.clone().into_iter().collect::<Vec<_>>(), right.clone().into_iter().collect::<Vec<_>>());
+let sod = squares_of_differences(left, right);
+(sod.iter().fold(0, |acc, n| acc + n) as f64 / sod.len() as f64).sqrt() as u32
+}
+*/
+
+fn squares_of_differences<L , R, J, D, P>(left: L, right: R) -> Vec<P>
+where L: IntoIterator<Item=J>,
+      R: IntoIterator<Item=J>,
+      J: ops::Sub<Output=D> + Display + Copy,
+      D: ops::Mul<Output=P> + Copy,
+      P: Display
+{
+  left.into_iter().zip(right.into_iter())
+    .map(|(l,r)| {
+      let d = l - r; let sod = d * d;
+      //println!("({} - {})**2 = {}", l, r, sod);
+      sod})
+    .collect()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  fn string_score(s: &str) -> u32 {
+    let v = String::from(s).into_bytes();
+    english_score(&v)
   }
-  */
 
-  fn squares_of_differences<L , R, J, D, P>(left: L, right: R) -> Vec<P>
-    where L: IntoIterator<Item=J>,
-          R: IntoIterator<Item=J>,
-          J: ops::Sub<Output=D> + Display + Copy,
-          D: ops::Mul<Output=P> + Copy,
-          P: Display
-  {
-    left.into_iter().zip(right.into_iter())
-      .map(|(l,r)| {
-        let d = l - r; let sod = d * d;
-        //println!("({} - {})**2 = {}", l, r, sod);
-        sod})
-      .collect()
+  #[test]
+  fn scores_english() {
+    assert!(string_score("") == 0, "empty is {}");
+    assert!(string_score("Defend the east wall of the castle") - 4505 < 4, "practical cryptography example = {}", string_score("Defend the east wall of the castle"));
+    assert!(string_score("some words") < 100000,
+    "some words = {}", string_score("some_words"));
+    assert!(string_score("some words") < string_score("zxcvbzxcvb"),
+    "'some words' = {} 'zxcvbzxcvb' = {}", string_score("some words"), string_score("zxcvb"));
+    assert!(string_score(";;;;;") > 71, "';;;;;' = {}", string_score(";;;;;"))
   }
 
-  #[cfg(test)]
-  mod tests {
-    use super::*;
-    fn string_score(s: &str) -> u32 {
-      let v = String::from(s).into_bytes();
-      english_score(&v)
-    }
-
-    #[test]
-    fn scores_english() {
-      assert!(string_score("") == 0, "empty is {}");
-      assert!(string_score("Defend the east wall of the castle") - 4505 < 4, "practical cryptography example = {}", string_score("Defend the east wall of the castle"));
-      assert!(string_score("some words") < 100000,
-              "some words = {}", string_score("some_words"));
-      assert!(string_score("some words") < string_score("zxcvbzxcvb"),
-              "'some words' = {} 'zxcvbzxcvb' = {}", string_score("some words"), string_score("zxcvb"));
-      assert!(string_score(";;;;;") > 71, "';;;;;' = {}", string_score(";;;;;"))
-    }
-
-  }
+}
 }
 
 mod utils {
@@ -231,7 +269,7 @@ mod utils {
   pub fn best_score<I, S, V>(list: I) -> Option<(S, V)>
     where I: Iterator<Item=(S, V)>,
           S: Ord + Clone
-    { list.min_by_key(|&(ref score,_)| score.clone()) }
+          { list.min_by_key(|&(ref score,_)| score.clone()) }
 
   pub fn by_score<I, S, V>(list: I) -> Vec<(S, V)>
     where I: Iterator<Item=(S, V)>,
