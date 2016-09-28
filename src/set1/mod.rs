@@ -158,7 +158,11 @@ mod frequency {
 
 
     pub fn isomorph_score(&self, other: &Counts<T>) -> u32 {
-      chisquare(self.sorted_counts(), self.total, other.sorted_counts(), other.total)
+//      println!("ISO:");
+//      println!("self:  {} {:?}", self.total, self.sorted_counts());
+//      println!("other: {} {:?}", other.total, other.sorted_counts());
+
+      chisquare(other.sorted_counts(), other.total, self.sorted_counts(), self.total)
     }
 
     fn counts(&self) -> Vec<u32> {
