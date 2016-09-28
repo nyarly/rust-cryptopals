@@ -10,17 +10,14 @@ use super::xor;
 /// Observe:
 ///
 /// # Examples
-/// ```
+/// ```ignore
 /// # use cryptopals::set1::challenge4;
-/// //assert_eq!(
-/// //  challenge4::slow_detect_xor_in_file("s3c4-data.txt"),
-/// //  "Now that the party is jumping\n"
-/// //);
 /// assert_eq!(
-///   challenge4::detect_xor_in_file("s3c4-data.txt"),
+///   challenge4::slow_detect_xor_in_file("s3c4-data.txt"),
 ///   "Now that the party is jumping\n"
 /// );
 /// ```
+///
 pub fn slow_detect_xor_in_file(path: &str) -> String {
   File::open(path).ok().and_then(|f| {
     let fr = BufReader::new(f);
@@ -39,10 +36,18 @@ pub fn slow_detect_xor<B: BufRead>(fr: B) -> Option<Vec<u8>> {
     });
   best_score(lines)
     .map(|(score, (crypt, line, key))| {
-         //println!("solution: {} {} {} {}", score, key as char, String::from_utf8_lossy(&crypt), String::from_utf8_lossy(&line));
+         println!("solution: {} {} {} {}", score, key as char, String::from_utf8_lossy(&crypt), String::from_utf8_lossy(&line));
          line})
 }
 
+/// # Examples
+/// ```
+/// # use cryptopals::set1::challenge4;
+/// assert_eq!(
+///   challenge4::detect_xor_in_file("s3c4-data.txt"),
+///   "Now that the party is jumping\n"
+/// );
+/// ```
 pub fn detect_xor_in_file(path: &str) -> String {
   File::open(path).ok().and_then(|f| {
     let fr = BufReader::new(f);
@@ -63,17 +68,16 @@ pub fn detect_xor<B: BufRead>(fr: B) -> Option<Vec<u8>> {
 
     let ranked =  by_score(scored_lines);
     let (match_score, _) = ranked[0];
+    let match_score = match_score + match_score / 20;
 
     best_score(
       ranked.into_iter()
-      //.inspect(|&(score, (ref counts, ref line))| println!("Ranked {} {}", score, String::from_utf8_lossy(&line)))
-      //.take_while(|&(score, _)| score - match_score < 300)
-      .take(3)
+      .inspect(|&(score, (ref counts, ref line))| println!("Ranked {} {}", score, String::from_utf8_lossy(&line)))
+      .take_while(|&(score, _)| score < match_score)
       .filter_map(|(_,  (counts,line))| {
         counts.most_congruent_item(&(*frequency::ENGLISH_FREQS), &(*frequency::ENGLISH_PENALTIES), 0, |a,b| a^b)
           .map(|(sc, key)| (sc, (key, line.clone())))
       })
-      //.inspect(|&(score, (key, ref line))| println!("Checkd {} {} {} {}",
-      //                                                  score, key, String::from_utf8_lossy(&line), String::from_utf8_lossy(&xor::decrypt(&line, key))))
+      .inspect(|&(score, (key, ref line))| println!("Checkd {} {} {} {}", score, key, String::from_utf8_lossy(&line), String::from_utf8_lossy(&xor::decrypt(&line, key))))
       ).map(|(_score, (key, line))| xor::decrypt(&line, key))
 }

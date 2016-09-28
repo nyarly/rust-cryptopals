@@ -105,10 +105,12 @@ mod frequency {
       let mut fc = BTreeMap::new();
       let mut count = 0;
       for it in list {
+        print!("{:?},", it);
         let entry = fc.entry(*it).or_insert(0);
         *entry += 1;
         count += 1
       }
+      println!("");
 
       Counts{
         counts: fc,
@@ -162,7 +164,9 @@ mod frequency {
 //      println!("self:  {} {:?}", self.total, self.sorted_counts());
 //      println!("other: {} {:?}", other.total, other.sorted_counts());
 
-      chisquare(other.sorted_counts(), other.total, self.sorted_counts(), self.total)
+      let size = self.counts.len();
+      let raw = chisquare(self.sorted_counts(), self.total, other.sorted_counts().iter().take(size).cloned(), other.total);
+      (raw as f64 * 100.0 / size as f64) as u32
     }
 
     fn counts(&self) -> Vec<u32> {
@@ -203,8 +207,9 @@ mod frequency {
     fc.congruent_score(&(*ENGLISH_FREQS)) + fc.penalty(&(*ENGLISH_PENALTIES))
   }
 
-  fn chisquare<I>(observed: I, obtot: u32, expected: I, extot: u32) -> u32
-    where I: IntoIterator<Item=u32> + Clone {
+  fn chisquare<I,J>(observed: I, obtot: u32, expected: J, extot: u32) -> u32
+    where I: IntoIterator<Item=u32> + Clone,
+          J: IntoIterator<Item=u32> + Clone {
       let factor = obtot as f64 / extot as f64;
       let exs = expected.into_iter().map(|e| e as f64 * factor).collect::<Vec<f64>>();
       let obs = observed.into_iter().map(|o| o as f64).chain(iter::repeat(0.0));

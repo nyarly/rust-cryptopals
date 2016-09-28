@@ -65,7 +65,7 @@ impl From<&'static str> for CrackError { fn from(e: &'static str) -> CrackError 
 ///   //println!("{:?}", String::from_utf8_lossy(ch))
 /// //}
 /// assert_eq!(keysize, 5);
-/// assert_eq!(key, String::from("i n n"));
+/// assert_eq!(key, String::from("innnn"));
 /// assert_eq!(result, String::from("another thing"))
 pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String),CrackError> {
   let file = try!(File::open(path));
@@ -74,6 +74,10 @@ pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String),Cra
   try!(buf.read_to_end(&mut b64bytes));
 
   let crypted = try!(b64bytes.from_base64());
+  for it in crypted.clone() {
+    print!("{:?},", it)
+  }
+  println!("");
 
   let keysize = try!(pick_keysize(&crypted));
   let key = try!(String::from_utf8((0..keysize).map(|offset| {
@@ -105,23 +109,36 @@ fn pick_keysize(crypted: &[u8]) -> Result<usize, CrackError> {
   })).map(|(_sc, ks)| ks).ok_or(CrackError::Str("empty keysize range"))
 }
 
+fn get_slice<'g, I>(crypted: &[u8], offset: usize, keysize: usize) -> I
+  where I: IntoIterator<Item=&'g u8> {
+  crypted.iter()
+    .enumerate()
+    .filter_map(|(i, ref c)|
+                if i % keysize == offset {
+                  Some(*c)
+                } else {
+                  None
+                });
+}
+
 fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
-    let sliced = crypted
-      .iter()
-      .enumerate()
-      .filter_map(|(i, ref c)|
-                  if i % keysize == offset {
-                    Some(*c)
-                  } else {
-                    None
-                  });
-    frequency::Counts::new(sliced)
+    frequency::Counts::new(get_slice(crypted, offset, keysize))
       .most_congruent_item(&(*frequency::ENGLISH_FREQS), &(*frequency::ENGLISH_PENALTIES), 0, |a,b| a^b)
       .map(|(_sc, key)| key)
 }
 
 #[cfg(test)]
 mod test {
+  #[test]
+  fn get_slice() {
+    let t = "0123456789".as_bytes();
+    assert_eq!(super::get_slice(t, 0, 2), "02468");
+    assert_eq!(super::get_slice(t, 1, 2), "13579");
+    assert_eq!(super::get_slice(t, 0, 3), "0369");
+    assert_eq!(super::get_slice(t, 1, 3), "147");
+    assert_eq!(super::get_slice(t, 2, 3), "258");
+  }
+
 
   #[test]
   fn hamming() {
