@@ -1,6 +1,4 @@
-use std::fmt;
-use std::string;
-use std::error;
+use std::{fmt,string,error,iter};
 use std::fs::File;
 use std::io::{BufReader,Read,self};
 use super::utils::*;
@@ -84,9 +82,8 @@ pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String),Cra
     key_for_slice(&crypted, offset, keysize).unwrap()
   }).collect()));
   let cryptstr = try!( String::from_utf8(crypted));
-  Ok((keysize, key.clone(), try!(
-        super::challenge5::repeating_key_xor(&cryptstr, &key).ok_or("empty crypt")
-        )))
+  Ok((keysize, key.clone(),
+      try!( super::challenge5::repeating_key_xor(&cryptstr, &key).ok_or("empty crypt"))))
 }
 
 fn hamming(left: &str, right: &str) -> u32 {
@@ -109,22 +106,23 @@ fn pick_keysize(crypted: &[u8]) -> Result<usize, CrackError> {
   })).map(|(_sc, ks)| ks).ok_or(CrackError::Str("empty keysize range"))
 }
 
-fn get_slice<'g, I>(crypted: &[u8], offset: usize, keysize: usize) -> I
-  where I: IntoIterator<Item=&'g u8> {
-  crypted.iter()
-    .enumerate()
-    .filter_map(|(i, ref c)|
-                if i % keysize == offset {
-                  Some(*c)
-                } else {
-                  None
-                });
-}
+fn get_slice<'g, I>(crypted: &'g [u8], offset: usize, keysize: usize) -> I
+   where I: Iterator<Item = &'g I> + 'g {
+     crypted.iter()
+       .enumerate()
+       .filter_map(|(i, ref c)|
+                   if i % keysize == offset {
+                     Some(*c)
+                   } else {
+                     None
+                   });
+   }
 
 fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
-    frequency::Counts::new(get_slice(crypted, offset, keysize))
-      .most_congruent_item(&(*frequency::ENGLISH_FREQS), &(*frequency::ENGLISH_PENALTIES), 0, |a,b| a^b)
-      .map(|(_sc, key)| key)
+  let slice = get_slice(crypted, offset, keysize);
+  frequency::Counts::new(slice)
+    .most_congruent_item(&(*frequency::ENGLISH_FREQS), &(*frequency::ENGLISH_PENALTIES), 0, |a,b| a^b)
+    .map(|(_sc, key)| key)
 }
 
 #[cfg(test)]
