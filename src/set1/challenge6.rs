@@ -65,7 +65,7 @@ impl From<&'static str> for CrackError { fn from(e: &'static str) -> CrackError 
 ///   //println!("{:?}", String::from_utf8_lossy(ch))
 /// //}
 /// assert_eq!(keysize, 5);
-/// assert_eq!(key, String::from("i n n"));
+/// assert_eq!(key, String::from("innnn"));
 /// assert_eq!(result, String::from("another thing"))
 pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String),CrackError> {
   let file = try!(File::open(path));
