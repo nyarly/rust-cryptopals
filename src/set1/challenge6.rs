@@ -125,15 +125,14 @@ fn pick_keysize(crypted: &[u8]) -> Result<usize, CrackError> {
         .ok_or(CrackError::Str("empty keysize range"))
 }
 
-fn get_slice<'g, I>(crypted: &'g [u8], offset: usize, keysize: usize) -> Vec<&'g u8> {
+fn get_slice<'g>(crypted: &'g [u8], offset: usize, keysize: usize) -> Vec<u8> {
     crypted.iter()
         .enumerate()
         .filter_map(|(i, ref c)| if i % keysize == offset {
             Some(*c)
         } else {
             None
-        })
-        .collect()
+        }).cloned().collect()
 }
 
 fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
@@ -151,7 +150,8 @@ mod test {
     #[test]
     fn get_slice() {
         let t = "0123456789".as_bytes();
-        assert_eq!(String::from_utf8_lossy(&(super::get_slice(t, 0, 2).iter().cloned().collect())),
+        assert_eq!(String::from_utf8(super::get_slice(t, 0, 2)
+                                     .iter().cloned().collect()).unwrap(),
                    String::from("02468"));
         assert_eq!(super::get_slice(t, 1, 2), "13579");
         assert_eq!(super::get_slice(t, 0, 3), "0369");
