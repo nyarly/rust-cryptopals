@@ -7,3 +7,4 @@ extern crate lazy_static;
 
 pub mod set1;
 pub mod byte_convert;
+pub mod result;
