@@ -1,9 +1,7 @@
-use std::fs::File;
-use std::io::{BufReader, Read};
 use super::utils::*;
 use super::frequency;
-use ::serialize::base64::FromBase64;
 use ::result::CrackError;
+use ::byte_convert::open_base64_path;
 
 /// There's a file here. It's been base64'd after being encrypted with repeating-key XOR.
 ///
@@ -18,12 +16,7 @@ use ::result::CrackError;
 /// assert_eq!(key, String::from("Terminator X: Bring the noise"));
 /// assert!(result.find("Supercalafragilisticexpialidocious").is_some())
 pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String), CrackError> {
-    let file = try!(File::open(path));
-    let mut buf = BufReader::new(file);
-    let mut b64bytes = Vec::new();
-    try!(buf.read_to_end(&mut b64bytes));
-
-    let crypted = try!(b64bytes.from_base64());
+    let crypted = try!(open_base64_path(path));
     let keysize = try!(pick_keysize(&crypted));
     let key = try!(String::from_utf8((0..keysize)
         .map(|offset| key_for_slice(&crypted, offset, keysize).unwrap())
