@@ -25,7 +25,7 @@ pub fn detect_aes_ecb(path: &str) -> Result<Option<Vec<u8>>> {
     let crypts = try!(byte_convert::open_hexlines_path(path));
 
     for crypt in crypts {
-        let chunks = (&crypt).chunks(16).map(|ch| &String::from_utf8_lossy(ch)).collect::<Vec<_>>();
+        let chunks = (&crypt).chunks(16).map(|ch| &ch.to_vec());
         let c = frequency::Counts::new(chunks);
         if c.sorted_counts()[0] > 1 {
             return Ok(Some(crypt));

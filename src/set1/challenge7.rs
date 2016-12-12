@@ -1,6 +1,6 @@
-use ::byte_convert::open_base64_path;
+use byte_convert::open_base64_path;
 use ::result::*;
-use ::crypto::{aes, blockmodes, buffer};
+use crypto::{aes, blockmodes, buffer};
 use std::iter;
 
 /// Examples
