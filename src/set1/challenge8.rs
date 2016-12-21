@@ -1,6 +1,7 @@
 use super::super::byte_convert;
 use super::super::result::Result;
 use super::frequency;
+use num_bigint::{BigInt, Sign};
 
 /// Detect AES in ECB mode
 /// In this file are a bunch of hex-encoded ciphertexts.
@@ -16,20 +17,17 @@ use super::frequency;
 /// Examples
 ///
 /// ```
-/// assert_eq!(
-///   cryptopal::set1::challenge8::detect_aes_ecb("./s1c8.txt").unwrap().unwrap(),
-///   "zxcv"
-///   )
+/// cryptopals::set1::challenge8::detect_aes_ecb("./s1c8.txt").unwrap().unwrap();
 /// ```
 pub fn detect_aes_ecb(path: &str) -> Result<Option<Vec<u8>>> {
-    let crypts = try!(byte_convert::open_hexlines_path(path));
+  let crypts = try!(byte_convert::open_hexlines_path(path));
 
-    for crypt in crypts {
-        let chunks = (&crypt).chunks(16).map(|ch| &ch.to_vec());
-        let c = frequency::Counts::new(chunks);
-        if c.sorted_counts()[0] > 1 {
-            return Ok(Some(crypt));
-        }
+  for crypt in crypts {
+    let chunks = (&crypt).chunks(16).map(|ch| BigInt::from_bytes_be(Sign::Plus, ch));
+    let c = frequency::Counts::new(chunks);
+    if c.sorted_counts()[0] > 1 {
+      return Ok(Some(crypt.clone()));
     }
-    return Ok(None);
+  }
+  return Ok(None);
 }

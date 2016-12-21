@@ -11,5 +11,5 @@ use super::xor::*;
 /// );
 /// ```
 pub fn repeating_key_xor(text: &str, key: &str) -> Option<String> {
-    String::from_utf8(xor_iters(text.bytes(), key.bytes().cycle())).ok()
+  String::from_utf8(xor_iters(text.bytes(), key.bytes().cycle())).ok()
 }
