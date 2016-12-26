@@ -70,7 +70,7 @@ pub fn detect_xor<B: BufRead>(fr: B) -> Option<Vec<u8>> {
                        .filter_map(|l| l.ok())
                        .filter_map(|l| hex2bytes(&l).ok())
                        .map(|line| {
-                         let counts: frequency::Counts<u8> = frequency::Counts::new(line.clone());
+                         let counts = frequency::Counts::<u8>::new::<_, &u8>(&line);
                          (counts, line)
                        })
                        .map(|(counts, line)| {

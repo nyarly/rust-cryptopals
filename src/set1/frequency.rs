@@ -67,13 +67,12 @@ use std::fmt::Debug;
 impl<T: Ord + Clone + Debug> Counts<T> {
   pub fn new<L, R>(list: L) -> Counts<T>
     where L: IntoIterator<Item = R>,
-          R: ToOwned<Owned = T> + Sized,
-          T: Borrow<R>
+          R: Borrow<T>
   {
     let mut fc = BTreeMap::new();
     let mut count = 0;
     for it in list {
-      let entry = fc.entry(it.to_owned()).or_insert(0);
+      let entry = fc.entry(it.borrow().clone()).or_insert(0);
       *entry += 1;
       count += 1
     }
