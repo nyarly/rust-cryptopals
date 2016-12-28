@@ -36,7 +36,7 @@ pub fn best_hex_decrypt(encrypted: &str) -> Vec<u8> {
 
 pub fn best_decrypt(cstr: &[u8]) -> Vec<u8> {
   let (_, best) = utils::best_score(utils::full_u8().map(|c| xor::scored_decrypt(&cstr, c)))
-                    .unwrap_or_else(|| (0, xor::decrypt(&cstr, b'0')));
+    .unwrap_or_else(|| (0, xor::decrypt(&cstr, b'0')));
   best
 }
 
@@ -65,7 +65,7 @@ mod utils {
     v
   }
 
-    #[cfg(test)]
+  #[cfg(test)]
   mod tests {
     use super::*;
     #[test]
@@ -93,9 +93,9 @@ mod xor {
           V: BitXor
   {
     pvec.into_iter()
-        .zip(kvec)
-        .map(|(p, k)| p ^ k)
-        .collect()
+      .zip(kvec)
+      .map(|(p, k)| p ^ k)
+      .collect()
   }
 
   pub fn decrypt(crypted: &[u8], key: u8) -> Vec<u8> {
@@ -103,7 +103,7 @@ mod xor {
   }
 
 
-    #[cfg(test)]
+  #[cfg(test)]
   mod tests {
     use super::*;
     use ::byte_convert::*;

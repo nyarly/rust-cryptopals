@@ -7,5 +7,6 @@ extern crate rustc_serialize as serialize;
 extern crate lazy_static;
 
 pub mod set1;
+pub mod set2;
 pub mod byte_convert;
 pub mod result;

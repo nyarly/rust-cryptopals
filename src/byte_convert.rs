@@ -28,9 +28,10 @@ pub fn open_hexlines_path(path: &str) -> Result<Vec<Vec<u8>>> {
   (&lines)
     .lines()
     .map(|line| {
-         let string = try!(line);
-         hex2bytes(&string).map_err(|s| CrackError::from(s))
-    }).collect()
+      let string = try!(line);
+      hex2bytes(&string).map_err(|s| CrackError::from(s))
+    })
+    .collect()
 }
 
 pub fn open_base64_path(path: &str) -> Result<Vec<u8>> {

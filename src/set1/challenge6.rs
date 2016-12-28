@@ -19,10 +19,8 @@ pub fn crack_repeating_key_xor(path: &str) -> Result<(usize, String, String), Cr
   let crypted = try!(open_base64_path(path));
   let keysize = try!(pick_keysize(&crypted));
   let key = try!(String::from_utf8((0..keysize)
-                                     .map(|offset| {
-                                       key_for_slice(&crypted, offset, keysize).unwrap()
-                                     })
-                                     .collect()));
+    .map(|offset| key_for_slice(&crypted, offset, keysize).unwrap())
+    .collect()));
   let cryptstr = try!(String::from_utf8(crypted));
   Ok((keysize,
       key.clone(),
@@ -35,32 +33,32 @@ fn hamming(left: &str, right: &str) -> u32 {
 
 fn pick_keysize(crypted: &[u8]) -> Result<usize, CrackError> {
   best_score((2..40).map(|a_keysize| {
-    let mut chunks = crypted.chunks(a_keysize);
-    let a = chunks.next().unwrap();
-    let pair = (((chunks.take(8)
-                        .fold(0, |acc, chunk| {
-                          acc +
-                          hamming(&String::from_utf8(a.to_vec()).unwrap(),
-                                  &String::from_utf8(chunk.to_vec()).unwrap())
-                        }) as f64 / a_keysize as f64) * 100.0) as u32,
-                a_keysize);
-    pair
-  }))
+      let mut chunks = crypted.chunks(a_keysize);
+      let a = chunks.next().unwrap();
+      let pair = (((chunks.take(8)
+        .fold(0, |acc, chunk| {
+          acc +
+          hamming(&String::from_utf8(a.to_vec()).unwrap(),
+                  &String::from_utf8(chunk.to_vec()).unwrap())
+        }) as f64 / a_keysize as f64) * 100.0) as u32,
+                  a_keysize);
+      pair
+    }))
     .map(|(_sc, ks)| ks)
     .ok_or(CrackError::Str("empty keysize range"))
 }
 
 fn get_slice(crypted: &[u8], offset: usize, keysize: usize) -> Vec<u8> {
   crypted.iter()
-         .enumerate()
-         .filter_map(|(i, c)| {
-           if i % keysize == offset {
-             Some(*c)
-           } else {
-             None
-           }
-         })
-         .collect()
+    .enumerate()
+    .filter_map(|(i, c)| {
+      if i % keysize == offset {
+        Some(*c)
+      } else {
+        None
+      }
+    })
+    .collect()
 }
 
 fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
@@ -77,9 +75,9 @@ fn key_for_slice(crypted: &[u8], offset: usize, keysize: usize) -> Option<u8> {
 mod test {
   fn munge_string(v: Vec<u8>) -> String {
     v.iter()
-     .cloned()
-     .map(|b| b as char)
-     .collect()
+      .cloned()
+      .map(|b| b as char)
+      .collect()
   }
 
   #[test]
