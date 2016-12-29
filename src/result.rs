@@ -1,5 +1,5 @@
 use std::{fmt, string, error};
-use ::serialize::base64;
+use serialize::base64;
 use std::io;
 use crypto;
 

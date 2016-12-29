@@ -63,6 +63,7 @@ lazy_static!{
 
 use std::borrow::Borrow;
 use std::fmt::Debug;
+use utils;
 
 impl<T: Ord + Clone + Debug> Counts<T> {
   pub fn new<L, R>(list: L) -> Counts<T>
@@ -154,10 +155,10 @@ impl<T: Ord + Clone + Debug> Counts<T> {
     s.sort_by(|&(_, l), &(_, r)| r.cmp(l));
     let (_, top) = s[0];
     s.iter()
-      .take_while(|&&(_, ref count)| top - *count <= threshold)
-      .map(|&(k, _)| k)
-      .cloned()
-      .collect()
+     .take_while(|&&(_, ref count)| top - *count <= threshold)
+     .map(|&(k, _)| k)
+     .cloned()
+     .collect()
   }
 
 
@@ -168,10 +169,11 @@ impl<T: Ord + Clone + Debug> Counts<T> {
                                                xform: F)
                                                -> Option<(u32, T)> {
     let ref anchor = against.most_frequent(0)[0];
-    super::utils::best_score(self.most_frequent(threshold).iter().map(|c| {
+    utils::best_score(self.most_frequent(threshold).iter().map(|c| {
       let proposed_key = xform((*c).clone(), (*anchor).clone());
       let xformed = self.transformed(|i| xform(i, proposed_key.clone()));
-      (xformed.congruent_score(against) + xformed.penalty(penalties), proposed_key)
+      (xformed.congruent_score(against) + xformed.penalty(penalties),
+       proposed_key)
     }))
   }
 }
@@ -192,17 +194,17 @@ fn chisquare<I, J>(observed: I, obtot: u32, expected: J, extot: u32) -> u32
   let obs = observed.into_iter().map(|o| o as f64).chain(iter::repeat(0.0));
   let sod = squares_of_differences(obs, exs.clone());
   (sod.iter()
-    .zip(exs)
-    .map(|(sd, ex)| {
-      let quotient = sd / ex;
-      // println!("{} {} {}", sd, ex, quotient);
-      quotient
-    })
-    .fold(0.0, |acc, n| {
-      let sum = acc + n;
-      // println!("sum: {} {}", n, sum);
-      sum
-    }) * 100.0) as u32
+      .zip(exs)
+      .map(|(sd, ex)| {
+        let quotient = sd / ex;
+        // println!("{} {} {}", sd, ex, quotient);
+        quotient
+      })
+      .fold(0.0, |acc, n| {
+        let sum = acc + n;
+        // println!("sum: {} {}", n, sum);
+        sum
+      }) * 100.0) as u32
 }
 
 // XXX consider Chi-square?
@@ -221,14 +223,14 @@ fn squares_of_differences<L, R, J, D, P>(left: L, right: R) -> Vec<P>
         P: Display
 {
   left.into_iter()
-    .zip(right.into_iter())
-    .map(|(l, r)| {
-      let d = l - r;
-      let sod = d * d;
-      // println!("({} - {})**2 = {}", l, r, sod);
-      sod
-    })
-    .collect()
+      .zip(right.into_iter())
+      .map(|(l, r)| {
+        let d = l - r;
+        let sod = d * d;
+        // println!("({} - {})**2 = {}", l, r, sod);
+        sod
+      })
+      .collect()
 }
 
 #[cfg(test)]

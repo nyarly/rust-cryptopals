@@ -1,6 +1,6 @@
 use super::super::byte_convert;
 use super::super::result::Result;
-use super::frequency;
+use frequency;
 use num_bigint::{BigInt, Sign};
 
 /// Detect AES in ECB mode

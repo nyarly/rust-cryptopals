@@ -3,7 +3,7 @@ use serialize::base64::{self, ToBase64};
 use result::{Result, CrackError};
 use std::fs::File;
 use std::io::{BufReader, BufRead, Read};
-use ::serialize::base64::FromBase64;
+use serialize::base64::FromBase64;
 
 pub fn hex2bigint(hex: &str) -> ::std::result::Result<BigInt, &'static str> {
   return BigInt::parse_bytes(hex.as_bytes(), 16).ok_or("Couldn't parse as hex");
