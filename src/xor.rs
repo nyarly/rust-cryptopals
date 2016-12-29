@@ -15,9 +15,9 @@ pub fn xor_iters<I, J, K, V>(pvec: I, kvec: J) -> K
         V: BitXor
 {
   pvec.into_iter()
-      .zip(kvec)
-      .map(|(p, k)| p ^ k)
-      .collect()
+    .zip(kvec)
+    .map(|(p, k)| p ^ k)
+    .collect()
 }
 
 pub fn decrypt(crypted: &[u8], key: u8) -> Vec<u8> {

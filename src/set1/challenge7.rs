@@ -1,7 +1,6 @@
 use byte_convert::open_base64_path;
 use result::*;
-use crypto::{aes, blockmodes, buffer};
-use std::iter;
+use aes::ecb;
 
 /// Examples
 ///
@@ -12,15 +11,7 @@ use std::iter;
 pub fn decrypt_file(path: &str) -> Result<String> {
   let crypted = try!(open_base64_path(path));
 
-  let mut plain: Vec<u8> = iter::repeat(0u8).take(crypted.len()).collect();
-  let mut decryptor = aes::ecb_decryptor(aes::KeySize::KeySize128,
-                                         "YELLOW SUBMARINE".as_bytes(),
-                                         blockmodes::NoPadding);
+  let plain = try!(ecb::decrypt("YELLOW SUBMARINE".as_bytes(), &crypted));
 
-  {
-    let mut cbuf = buffer::RefReadBuffer::new(&crypted);
-    let mut pbuf = buffer::RefWriteBuffer::new(plain.as_mut_slice());
-    try!(decryptor.decrypt(&mut cbuf, &mut pbuf, false));
-  }
-  String::from_utf8(plain.clone()).map_err(CrackError::from)
+  String::from_utf8(plain).map_err(CrackError::from)
 }

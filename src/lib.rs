@@ -12,4 +12,5 @@ pub mod byte_convert;
 mod xor;
 mod frequency;
 mod utils;
+mod aes;
 pub mod result;

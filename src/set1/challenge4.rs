@@ -30,13 +30,13 @@ pub fn slow_detect_xor_in_file(path: &str) -> String {
 
 pub fn slow_detect_xor<B: BufRead>(fr: B) -> Option<Vec<u8>> {
   let lines = fr.lines()
-                .filter_map(|l| l.ok())
-                .filter_map(|l| hex2bytes(&l).ok())
-                .flat_map(|line| {
-                  full_u8()
-                    .map(move |key| (line.clone(), xor::decrypt(&line, key), key))
-                    .map(|(crypt, line, key)| (frequency::english_score(&line), (crypt, line, key)))
-                });
+    .filter_map(|l| l.ok())
+    .filter_map(|l| hex2bytes(&l).ok())
+    .flat_map(|line| {
+      full_u8()
+        .map(move |key| (line.clone(), xor::decrypt(&line, key), key))
+        .map(|(crypt, line, key)| (frequency::english_score(&line), (crypt, line, key)))
+    });
   best_score(lines).map(|(score, (crypt, line, key))| {
     println!("solution: {} {} {} {}",
              score,
@@ -67,29 +67,29 @@ pub fn detect_xor_in_file(path: &str) -> String {
 
 pub fn detect_xor<B: BufRead>(fr: B) -> Option<Vec<u8>> {
   let scored_lines = fr.lines()
-                       .filter_map(|l| l.ok())
-                       .filter_map(|l| hex2bytes(&l).ok())
-                       .map(|line| {
-                         let counts = frequency::Counts::<u8>::new::<_, &u8>(&line);
-                         (counts, line)
-                       })
-                       .map(|(counts, line)| {
-                         let score = counts.isomorph_score(&(*frequency::ENGLISH_FREQS));
-                         (score, (counts, line))
-                       });
+    .filter_map(|l| l.ok())
+    .filter_map(|l| hex2bytes(&l).ok())
+    .map(|line| {
+      let counts = frequency::Counts::<u8>::new::<_, &u8>(&line);
+      (counts, line)
+    })
+    .map(|(counts, line)| {
+      let score = counts.isomorph_score(&(*frequency::ENGLISH_FREQS));
+      (score, (counts, line))
+    });
 
   let ranked = by_score(scored_lines);
   let (match_score, _) = ranked[0];
   let match_score = match_score + match_score / 20;
 
   best_score(ranked.into_iter()
-                   .take_while(|&(score, _)| score < match_score)
-                   .filter_map(|(_, (counts, line))| {
-                     counts.most_congruent_item(&(*frequency::ENGLISH_FREQS),
-                                                &(*frequency::ENGLISH_PENALTIES),
-                                                0,
-                                                |a, b| a ^ b)
-                           .map(|(sc, key)| (sc, (key, line.clone())))
-                   }))
+      .take_while(|&(score, _)| score < match_score)
+      .filter_map(|(_, (counts, line))| {
+        counts.most_congruent_item(&(*frequency::ENGLISH_FREQS),
+                               &(*frequency::ENGLISH_PENALTIES),
+                               0,
+                               |a, b| a ^ b)
+          .map(|(sc, key)| (sc, (key, line.clone())))
+      }))
     .map(|(_score, (key, line))| xor::decrypt(&line, key))
 }
