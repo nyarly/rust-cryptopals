@@ -25,3 +25,15 @@ pub fn encrypt(key: &[u8], input: &[u8]) -> Result<Vec<u8>> {
   }
   Ok(out.clone())
 }
+
+#[cfg(test)]
+mod test {
+  use super::*;
+  #[test]
+  fn encrypt_decrypt() {
+    let key = "YELLOW SUBMARINE".as_bytes();
+    let message = "Attack the castle gates from the west wall.".as_bytes();
+    assert_eq!(message,
+               decrypt(key, &(encrypt(key, message).unwrap())).unwrap().as_slice())
+  }
+}
