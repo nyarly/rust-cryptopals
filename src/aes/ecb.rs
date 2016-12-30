@@ -9,7 +9,7 @@ pub fn decrypt(key: &[u8], input: &[u8]) -> Result<Vec<u8>> {
   {
     let mut cbuf = buffer::RefReadBuffer::new(input);
     let mut pbuf = buffer::RefWriteBuffer::new(out.as_mut_slice());
-    try!(decryptor.decrypt(&mut cbuf, &mut pbuf, false));
+    try!(decryptor.decrypt(&mut cbuf, &mut pbuf, true));
   }
   Ok(out.clone())
 }
@@ -21,7 +21,7 @@ pub fn encrypt(key: &[u8], input: &[u8]) -> Result<Vec<u8>> {
   {
     let mut cbuf = buffer::RefReadBuffer::new(input);
     let mut pbuf = buffer::RefWriteBuffer::new(out.as_mut_slice());
-    try!(encryptor.encrypt(&mut cbuf, &mut pbuf, false));
+    try!(encryptor.encrypt(&mut cbuf, &mut pbuf, true));
   }
   Ok(out.clone())
 }
@@ -32,8 +32,11 @@ mod test {
   #[test]
   fn encrypt_decrypt() {
     let key = "YELLOW SUBMARINE".as_bytes();
-    let message = "Attack the castle gates from the west wall.".as_bytes();
-    assert_eq!(message,
-               decrypt(key, &(encrypt(key, message).unwrap())).unwrap().as_slice())
+    let message = "Attack the castle gates from the high west wall.".as_bytes();
+    let crypted = encrypt(key, message).unwrap();
+    println!("");
+    println!("{} {:?}", message.len(), message);
+    println!("{} {:?}", crypted.len(), crypted);
+    assert_eq!(message, decrypt(key, &crypted).unwrap().as_slice())
   }
 }
