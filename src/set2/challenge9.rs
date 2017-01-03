@@ -2,9 +2,9 @@ use std::iter::repeat;
 pub fn pkcs7(data: &[u8], block_size: usize) -> Vec<u8> {
   let padding = block_size - (data.len() % block_size);
   data.iter()
-    .chain(repeat(&(padding as u8)).take(padding))
-    .map(|c| c.clone())
-    .collect()
+      .chain(repeat(&(padding as u8)).take(padding))
+      .map(|c| c.clone())
+      .collect()
 }
 
 #[cfg(test)]
