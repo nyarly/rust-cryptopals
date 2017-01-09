@@ -1,6 +1,7 @@
 use aes::{ecb, cbc};
 use rand::{self, Rng};
 use rand::distributions::{range, IndependentSample};
+use result::Result;
 
 
 /// An ECB/CBC detection oracle
@@ -33,10 +34,10 @@ enum Mode {
 }
 
 
-fn pick_encryption_oracle(kind: Mode) -> fn(&[u8]) -> Vec<u8> {
+fn pick_encryption_oracle(kind: Mode) -> fn(&[u8]) -> Result<Vec<u8>> {
   match kind {
-    ElectronicCodebook => ecb_encryption_oracle,
-    CipherBlockChaining => cbc_encryption_oracle,
+    Mode::ElectronicCodebook => ecb_encryption_oracle,
+    Mode::CipherBlockChaining => cbc_encryption_oracle,
   }
 }
 
@@ -69,12 +70,12 @@ fn random_padding(input: &[u8]) -> Vec<u8> {
   padded
 }
 
-fn cbc_encryption_oracle(your_input: &[u8]) -> Vec<u8> {
-  cbc::encrypt(random_bytes(16),
-               random_bytes(16),
-               random_padding(your_input))
+fn cbc_encryption_oracle(your_input: &[u8]) -> Result<Vec<u8>> {
+  cbc::encrypt(&random_bytes(16),
+               &random_bytes(16),
+               &random_padding(your_input))
 }
 
-fn ecb_encryption_oracle(your_input: &[u8]) -> Vec<u8> {
-  ecb::encrypt(&random_bytes(16), random_padding(your_input))
+fn ecb_encryption_oracle(your_input: &[u8]) -> Result<Vec<u8>> {
+  ecb::encrypt(&random_bytes(16), &random_padding(your_input))
 }
