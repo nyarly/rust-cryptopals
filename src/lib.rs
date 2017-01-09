@@ -1,6 +1,7 @@
 extern crate num_bigint;
 extern crate num;
 extern crate crypto;
+extern crate rand;
 extern crate rustc_serialize as serialize;
 
 #[macro_use]

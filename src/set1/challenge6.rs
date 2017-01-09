@@ -36,11 +36,11 @@ fn pick_keysize(crypted: &[u8]) -> Result<usize, CrackError> {
       let mut chunks = crypted.chunks(a_keysize);
       let a = chunks.next().unwrap();
       let pair = (((chunks.take(8)
-        .fold(0, |acc, chunk| {
-          acc +
-          hamming(&String::from_utf8(a.to_vec()).unwrap(),
-                  &String::from_utf8(chunk.to_vec()).unwrap())
-        }) as f64 / a_keysize as f64) * 100.0) as u32,
+                    .fold(0, |acc, chunk| {
+                      acc +
+                      hamming(&String::from_utf8(a.to_vec()).unwrap(),
+                              &String::from_utf8(chunk.to_vec()).unwrap())
+                    }) as f64 / a_keysize as f64) * 100.0) as u32,
                   a_keysize);
       pair
     }))
