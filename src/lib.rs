@@ -14,4 +14,5 @@ mod xor;
 mod frequency;
 mod utils;
 mod aes;
+mod padding;
 pub mod result;

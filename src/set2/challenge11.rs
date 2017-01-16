@@ -2,6 +2,9 @@ use aes::{ecb, cbc};
 use rand::{self, Rng};
 use rand::distributions::{range, IndependentSample};
 use result::Result;
+use frequency;
+use padding;
+use num_bigint::{BigInt, Sign};
 
 
 /// An ECB/CBC detection oracle
@@ -27,12 +30,37 @@ use result::Result;
 /// Detect the block cipher mode the function is using each time. You should end
 /// up with a piece of code that, pointed at a block box that might be
 /// encrypting ECB or CBC, tells you which one is happening.
-
+#[derive(Debug,PartialEq,Clone,Copy)]
 enum Mode {
   ElectronicCodebook,
   CipherBlockChaining,
 }
 
+fn detector(oracle: fn(&[u8]) -> Result<Vec<u8>>) -> Result<Mode> {
+  let exploit_message = &[0; 96]; // 6 * 16 = blocksize (should work down to 3)
+
+  let crypt = try!(oracle(exploit_message));
+  let chunks = (&crypt.as_slice()).chunks(16).map(|ch| BigInt::from_bytes_be(Sign::Plus, ch));
+  let c = frequency::Counts::new(chunks);
+
+  if c.sorted_counts()[0] > 1 {
+    Ok(Mode::ElectronicCodebook)
+  } else {
+    Ok(Mode::CipherBlockChaining)
+  }
+}
+
+fn encryption_oracle(input: &[u8]) -> Result<Vec<u8>> {
+  let mut rng = rand::thread_rng();
+
+  let oracle = if rng.gen() {
+    pick_encryption_oracle(Mode::ElectronicCodebook)
+  } else {
+    pick_encryption_oracle(Mode::CipherBlockChaining)
+  };
+
+  oracle(input)
+}
 
 fn pick_encryption_oracle(kind: Mode) -> fn(&[u8]) -> Result<Vec<u8>> {
   match kind {
@@ -73,9 +101,29 @@ fn random_padding(input: &[u8]) -> Vec<u8> {
 fn cbc_encryption_oracle(your_input: &[u8]) -> Result<Vec<u8>> {
   cbc::encrypt(&random_bytes(16),
                &random_bytes(16),
-               &random_padding(your_input))
+               &padding::pkcs7(&random_padding(your_input), 16))
 }
 
 fn ecb_encryption_oracle(your_input: &[u8]) -> Result<Vec<u8>> {
-  ecb::encrypt(&random_bytes(16), &random_padding(your_input))
+  ecb::encrypt(&random_bytes(16),
+               &padding::pkcs7(&random_padding(your_input), 16))
+}
+
+#[cfg(test)]
+mod test {
+  use super::{Mode, detector, pick_encryption_oracle};
+
+  fn matching_mode(mode: Mode) {
+    assert_eq!(detector(pick_encryption_oracle(mode)).unwrap(), mode);
+  }
+
+  #[test]
+  fn recognize_ecb() {
+    matching_mode(Mode::ElectronicCodebook)
+  }
+
+  #[test]
+  fn recognize_cbc() {
+    matching_mode(Mode::CipherBlockChaining)
+  }
 }
