@@ -1,4 +1,3 @@
-use std::iter;
 use xor;
 use result::Result;
 use super::ecb;

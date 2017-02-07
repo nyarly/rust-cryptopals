@@ -1,10 +1,9 @@
 use aes::{ecb, cbc};
-use rand::{self, Rng};
-use rand::distributions::{range, IndependentSample};
 use result::Result;
 use frequency;
 use padding;
 use num_bigint::{BigInt, Sign};
+use rand::{self, Rng};
 
 
 /// An ECB/CBC detection oracle
@@ -31,12 +30,12 @@ use num_bigint::{BigInt, Sign};
 /// up with a piece of code that, pointed at a block box that might be
 /// encrypting ECB or CBC, tells you which one is happening.
 #[derive(Debug,PartialEq,Clone,Copy)]
-enum Mode {
+pub enum Mode {
   ElectronicCodebook,
   CipherBlockChaining,
 }
 
-fn detector(oracle: fn(&[u8]) -> Result<Vec<u8>>) -> Result<Mode> {
+pub fn detector(oracle: fn(&[u8]) -> Result<Vec<u8>>) -> Result<Mode> {
   let exploit_message = &[0; 96]; // 6 * 16 = blocksize (should work down to 3)
 
   let crypt = try!(oracle(exploit_message));
@@ -50,7 +49,7 @@ fn detector(oracle: fn(&[u8]) -> Result<Vec<u8>>) -> Result<Mode> {
   }
 }
 
-fn encryption_oracle(input: &[u8]) -> Result<Vec<u8>> {
+pub fn encryption_oracle(input: &[u8]) -> Result<Vec<u8>> {
   let mut rng = rand::thread_rng();
 
   let oracle = if rng.gen() {
@@ -69,44 +68,48 @@ fn pick_encryption_oracle(kind: Mode) -> fn(&[u8]) -> Result<Vec<u8>> {
   }
 }
 
-fn random_byte_range(start: usize, end: usize) -> Vec<u8> {
-  let mut rand = rand::thread_rng();
+mod random {
+  use rand::{self, Rng};
+  use rand::distributions::{range, IndependentSample};
+  pub fn byte_range(start: usize, end: usize) -> Vec<u8> {
+    let mut rand = rand::thread_rng();
 
-  let len_range = range::Range::new(start, end);
-  let len = len_range.ind_sample(&mut rand);
+    let len_range = range::Range::new(start, end);
+    let len = len_range.ind_sample(&mut rand);
 
-  random_bytes(len)
-}
-
-fn random_bytes(len: usize) -> Vec<u8> {
-  let mut rand = rand::thread_rng();
-  let mut bytes = Vec::new();
-
-  for n in 0..len {
-    bytes.push(rand.gen())
+    bytes(len)
   }
 
-  bytes
-}
+  pub fn bytes(len: usize) -> Vec<u8> {
+    let mut rand = rand::thread_rng();
+    let mut bytes = Vec::new();
+
+    for _ in 0..len {
+      bytes.push(rand.gen())
+    }
+
+    bytes
+  }
 
 
-fn random_padding(input: &[u8]) -> Vec<u8> {
-  let mut padded = random_byte_range(5, 10);
-  padded.extend_from_slice(input);
-  let mut tail = random_byte_range(5, 10);
-  padded.append(&mut tail);
-  padded
+  pub fn padding(input: &[u8]) -> Vec<u8> {
+    let mut padded = byte_range(5, 10);
+    padded.extend_from_slice(input);
+    let mut tail = byte_range(5, 10);
+    padded.append(&mut tail);
+    padded
+  }
 }
 
 fn cbc_encryption_oracle(your_input: &[u8]) -> Result<Vec<u8>> {
-  cbc::encrypt(&random_bytes(16),
-               &random_bytes(16),
-               &padding::pkcs7(&random_padding(your_input), 16))
+  cbc::encrypt(&random::bytes(16),
+               &random::bytes(16),
+               &padding::pkcs7(&random::padding(your_input), 16))
 }
 
 fn ecb_encryption_oracle(your_input: &[u8]) -> Result<Vec<u8>> {
-  ecb::encrypt(&random_bytes(16),
-               &padding::pkcs7(&random_padding(your_input), 16))
+  ecb::encrypt(&random::bytes(16),
+               &padding::pkcs7(&random::padding(your_input), 16))
 }
 
 #[cfg(test)]
