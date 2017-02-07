@@ -1,9 +1,11 @@
 use aes::{ecb, cbc};
 use result::Result;
-use frequency;
-use padding;
 use num_bigint::{BigInt, Sign};
 use rand::{self, Rng};
+
+use frequency;
+use padding;
+use random;
 
 
 /// An ECB/CBC detection oracle
@@ -65,39 +67,6 @@ fn pick_encryption_oracle(kind: Mode) -> fn(&[u8]) -> Result<Vec<u8>> {
   match kind {
     Mode::ElectronicCodebook => ecb_encryption_oracle,
     Mode::CipherBlockChaining => cbc_encryption_oracle,
-  }
-}
-
-mod random {
-  use rand::{self, Rng};
-  use rand::distributions::{range, IndependentSample};
-  pub fn byte_range(start: usize, end: usize) -> Vec<u8> {
-    let mut rand = rand::thread_rng();
-
-    let len_range = range::Range::new(start, end);
-    let len = len_range.ind_sample(&mut rand);
-
-    bytes(len)
-  }
-
-  pub fn bytes(len: usize) -> Vec<u8> {
-    let mut rand = rand::thread_rng();
-    let mut bytes = Vec::new();
-
-    for _ in 0..len {
-      bytes.push(rand.gen())
-    }
-
-    bytes
-  }
-
-
-  pub fn padding(input: &[u8]) -> Vec<u8> {
-    let mut padded = byte_range(5, 10);
-    padded.extend_from_slice(input);
-    let mut tail = byte_range(5, 10);
-    padded.append(&mut tail);
-    padded
   }
 }
 

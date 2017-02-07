@@ -12,6 +12,7 @@ pub mod set2;
 pub mod byte_convert;
 mod xor;
 mod frequency;
+mod random;
 mod utils;
 mod aes;
 mod padding;
