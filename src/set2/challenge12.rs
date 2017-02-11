@@ -1,7 +1,9 @@
+use serialize::base64::FromBase64;
+use result::{Result, CrackError};
+
 use aes::ecb;
 use random;
-use serialize::base64::FromBase64;
-use result::Result;
+use padding;
 
 // Byte-at-a-time ECB decryption (Simple)
 // Copy your oracle function to a new function that encrypts buffers under ECB mode using a consistent but unknown key (for instance, assign a single random key, once, to a global variable).
@@ -34,8 +36,8 @@ use result::Result;
 
 pub fn solve() -> &'static str {
   let oracle = EncryptionOracle::new();
-  let mut supplicant = Suplicant::new();
-  supplicant.interrogate(&oracle);
+  let mut supplicant = Supplicant::new(&oracle);
+  supplicant.interrogate().unwrap();
   "DONE"
 }
 
@@ -55,23 +57,60 @@ impl EncryptionOracle {
   }
 
   pub fn advise(&self, input: &[u8]) -> Result<Vec<u8>> {
-    ecb::encrypt(&self.key, &[input, &self.message].concat())
+    ecb::encrypt(&self.key, &padding::pkcs7(&[input, &self.message].concat()))
   }
 }
 
-struct Suplicant {
+struct Supplicant<'g> {
   block_size: usize,
+  oracle: &'g EncryptionOracle,
 }
 
-impl Suplicant {
-  fn new() -> Suplicant {
-    Suplicant { block_size: 0 }
+use std::iter::repeat;
+use util::full_u8;
+
+impl<'g> Supplicant<'g> {
+  fn new(oracle: &EncryptionOracle) -> Supplicant {
+    Supplicant {
+      block_size: 16,
+      oracle: oracle,
+    }
   }
 
-  fn interrogate(&mut self, oracle: &EncryptionOracle) {
-    match oracle.advise("A".as_bytes()) {
-      Err(_) => self.block_size = 17,
-      Ok(_) => self.block_size = 16,
+  fn interrogate(&mut self) -> Result<&Supplicant> {
+    // cheating: assuming ECB with 16 byte block
+    // ( might be able to do block + ECB detection by sending 3 * speculated
+    // blocksize, and looking for blocksize repeats...)
+    //
+    // let phase = try!(self.block_period(0));
+    // self.block_size = try!(self.block_period(phase));
+    let dictionary = self.build_dict("");
+    Ok(self)
+  }
+
+
+  fn build_dict(&self, known: &[u8]) -> Result<u8> {
+    let shim = repeat(b'a').take(block_size - 1);
+
+    let target = self.oracle.advise(shim);
+
+    for c in full_u8() {
+      let trial = shim.chain(c).collect();
+      let prophecy = &self.oracle.advise(trial);
+
+      dict.insert(prophecy, trial)
     }
+    return dict;
+  }
+
+  fn block_period(&self, block_phase: usize) -> Result<usize> {
+    for n in 1..64 {
+      let trial: Vec<u8> = repeat(b'A').take(n + block_phase).collect();
+      match self.oracle.advise(&trial) {
+        Err(_) => (),
+        Ok(_) => return Ok(n),
+      }
+    }
+    Err(CrackError::Str("No block periodicity detected"))
   }
 }
