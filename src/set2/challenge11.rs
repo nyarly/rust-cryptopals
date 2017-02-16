@@ -1,9 +1,7 @@
 use aes::{ecb, cbc};
 use result::Result;
-use num_bigint::{BigInt, Sign};
 use rand::{self, Rng};
 
-use frequency;
 use padding;
 use random;
 
@@ -31,25 +29,8 @@ use random;
 /// Detect the block cipher mode the function is using each time. You should end
 /// up with a piece of code that, pointed at a block box that might be
 /// encrypting ECB or CBC, tells you which one is happening.
-#[derive(Debug,PartialEq,Clone,Copy)]
-pub enum Mode {
-  ElectronicCodebook,
-  CipherBlockChaining,
-}
 
-pub fn detector(oracle: fn(&[u8]) -> Result<Vec<u8>>) -> Result<Mode> {
-  let exploit_message = &[0; 96]; // 6 * 16 = blocksize (should work down to 3)
-
-  let crypt = try!(oracle(exploit_message));
-  let chunks = (&crypt.as_slice()).chunks(16).map(|ch| BigInt::from_bytes_be(Sign::Plus, ch));
-  let c = frequency::Counts::new(chunks);
-
-  if c.sorted_counts()[0] > 1 {
-    Ok(Mode::ElectronicCodebook)
-  } else {
-    Ok(Mode::CipherBlockChaining)
-  }
-}
+use analysis::Mode;
 
 pub fn encryption_oracle(input: &[u8]) -> Result<Vec<u8>> {
   let mut rng = rand::thread_rng();
@@ -83,10 +64,12 @@ fn ecb_encryption_oracle(your_input: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod test {
-  use super::{Mode, detector, pick_encryption_oracle};
+  use super::pick_encryption_oracle;
+  use analysis::Mode;
+  use analysis::aes::detector;
 
   fn matching_mode(mode: Mode) {
-    assert_eq!(detector(pick_encryption_oracle(mode)).unwrap(), mode);
+    assert_eq!(detector(16, pick_encryption_oracle(mode)).unwrap(), mode);
   }
 
   #[test]

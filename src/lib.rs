@@ -16,4 +16,5 @@ mod random;
 mod utils;
 mod aes;
 mod padding;
+pub mod analysis;
 pub mod result;
