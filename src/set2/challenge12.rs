@@ -38,14 +38,14 @@ use padding;
 mod test {
   #[test]
   fn can_solve() {
-    assert!(super::solve()
-      .find("Supercalafragilisticexpialidocious")
-      .is_some())
+    let cracked = super::solve("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK".as_bytes());
+
+    assert!(cracked.find("waving just").is_some())
   }
 }
 
-pub fn solve() -> String {
-  let oracle = EncryptionOracle::new();
+pub fn solve(b64msg: &[u8]) -> String {
+  let oracle = EncryptionOracle::new(b64msg);
   let mut supplicant = Supplicant::new(&oracle);
   supplicant.interrogate().unwrap();
   String::from_utf8(supplicant.decrypted).unwrap()
@@ -57,8 +57,8 @@ struct EncryptionOracle {
 }
 
 impl EncryptionOracle {
-  fn new() -> EncryptionOracle {
-    let b64msg = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK".as_bytes();
+  fn new(msg: &[u8]) -> EncryptionOracle {
+    let b64msg = msg.clone();
     let msg = b64msg.from_base64().unwrap();
     EncryptionOracle {
       key: random::bytes(16),
@@ -74,6 +74,8 @@ impl EncryptionOracle {
 
 struct Supplicant<'g> {
   block_size: usize,
+  cipher_mode: Mode,
+  target_crypt: Vec<u8>,
   target_size: usize,
   decrypted: Vec<u8>,
   oracle: &'g EncryptionOracle,
@@ -83,11 +85,12 @@ use std::iter::{once, repeat};
 use utils::full_u8;
 use analysis::{self, Mode};
 
-
 impl<'g> Supplicant<'g> {
   fn new(oracle: &EncryptionOracle) -> Supplicant {
     Supplicant {
       block_size: 16,
+      cipher_mode: Mode::CipherBlockChaining,
+      target_crypt: vec![],
       target_size: 0,
       decrypted: vec![],
       oracle: oracle,
@@ -96,47 +99,69 @@ impl<'g> Supplicant<'g> {
 
   fn interrogate(&mut self) -> Result<&Supplicant> {
     self.block_size = try!(self.block_period());
-    self.target_size = try!(self.oracle.advise(&[][0..0])).len();
+    self.cipher_mode = try!(self.detect_mode());
+    self.target_crypt = try!(self.oracle.advise(&[][0..0]));
+    self.target_size = self.target_crypt.len();
     for _ in 0..self.target_size {
-      let next_byte = try!(self.build_dict(&self.decrypted));
-      self.decrypted.push(next_byte)
+      match self.build_dict(&self.decrypted) {
+        Ok(next_byte) => self.decrypted.push(next_byte),
+        Err(_) => {
+          self.decrypted.pop(); //very good reason for this; it'll always be 1
+          return self.validate();
+        }
+      }
     }
-    Ok(self)
+    self.validate()
   }
 
+  fn validate(&self) -> Result<&Supplicant> {
+    let trial = &padding::pkcs7(&self.decrypted, self.block_size);
+    let prophecy = &try!(self.oracle.advise(trial));
+    let check = &prophecy[0..self.target_size];
+    let against = &self.target_crypt[..];
+
+    if check == against {
+      Ok(self)
+    } else {
+      Err(CrackError::Str("Doesn't match!"))
+    }
+  }
 
   fn build_dict(&self, known: &[u8]) -> Result<u8> {
-    let prefix_length = (known.len() % self.block_size) * self.block_size;
-    let suffix_length = known.len() - prefix_length;
+    let target_block_start = (known.len() / self.block_size) * self.block_size;
+    let target_block_end = target_block_start + self.block_size;
+    let target_block_range = target_block_start..target_block_end;
+    let target_known_bytes = known.len() - target_block_start;
     let a = &b'a';
-    println!("{} {} {}", prefix_length, suffix_length, self.block_size);
-    let shim = known[..prefix_length]
-      .iter()
-      .chain(repeat(a).take(self.block_size - suffix_length - 1))
-      .chain(&known[prefix_length..]);
+    let shim = repeat(a).take(self.block_size - target_known_bytes - 1);
 
     let msg: Vec<u8> = shim.clone().cloned().collect();
-    let target = try!(self.oracle.advise(&msg));
+    let target = &try!(self.oracle.advise(&msg))[target_block_range.clone()];
 
     for c in full_u8() {
-      let trial: Vec<u8> = shim.clone().cloned().chain(once(c)).collect();
-      let prophecy = try!(self.oracle.advise(&trial));
+      let trial: Vec<u8> = shim.clone().chain(known).cloned().chain(once(c)).collect();
+      let prophecy = &try!(self.oracle.advise(&trial))[target_block_range.clone()];
 
-      if prophecy[prefix_length..known.len()] == target[prefix_length..known.len()] {
+      if prophecy == target {
         return Ok(c);
       }
     }
-    return Err(CrackError::Str("No byte satisfied prophecy!"));
+    return Err(CrackError::Str("No byte satisfies!"));
   }
 
   fn block_period(&self) -> Result<usize> {
+    let base_size = try!(self.oracle.advise(&[][0..0])).len();
     for n in 1..64 {
-      let oracle_fn = |msg: &[u8]| self.oracle.advise(msg);
-      match try!(analysis::aes::detector(n, oracle_fn)) {
-        Mode::ElectronicCodebook => return Ok(n),
-        _ => (),
+      let size = try!(self.oracle.advise(&(repeat(b'a').take(n).collect::<Vec<_>>()))).len();
+      if size != base_size {
+        return Ok(size - base_size);
       }
     }
     Err(CrackError::Str("No block periodicity detected"))
+  }
+
+  fn detect_mode(&self) -> Result<Mode> {
+    let oracle_fn = |msg: &[u8]| self.oracle.advise(msg);
+    analysis::aes::detector(self.block_size, oracle_fn)
   }
 }
