@@ -98,26 +98,23 @@ impl<'g> Supplicant<'g> {
   }
 
   fn interrogate(&mut self) -> Result<&Supplicant> {
-    self.block_size = try!(self.block_period());
+    let (bs, ts) = try!(self.block_period());
+    self.block_size = bs;
+    self.target_size = ts;
     self.cipher_mode = try!(self.detect_mode());
     self.target_crypt = try!(self.oracle.advise(&[][0..0]));
-    self.target_size = self.target_crypt.len();
     for _ in 0..self.target_size {
-      match self.build_dict(&self.decrypted) {
-        Ok(next_byte) => self.decrypted.push(next_byte),
-        Err(_) => {
-          self.decrypted.pop(); //very good reason for this; it'll always be 1
-          return self.validate();
-        }
-      }
+      let next_byte = try!(self.build_dict(&self.decrypted));
+      self.decrypted.push(next_byte)
     }
+    println!("Validation!");
     self.validate()
   }
 
   fn validate(&self) -> Result<&Supplicant> {
     let trial = &padding::pkcs7(&self.decrypted, self.block_size);
     let prophecy = &try!(self.oracle.advise(trial));
-    let check = &prophecy[0..self.target_size];
+    let check = &prophecy[0..self.target_crypt.len()];
     let against = &self.target_crypt[..];
 
     if check == against {
@@ -149,12 +146,15 @@ impl<'g> Supplicant<'g> {
     return Err(CrackError::Str("No byte satisfies!"));
   }
 
-  fn block_period(&self) -> Result<usize> {
+  fn block_period(&self) -> Result<(usize, usize)> {
     let base_size = try!(self.oracle.advise(&[][0..0])).len();
     for n in 1..64 {
       let size = try!(self.oracle.advise(&(repeat(b'a').take(n).collect::<Vec<_>>()))).len();
       if size != base_size {
-        return Ok(size - base_size);
+        println!("{} {} {}", base_size, size, n);
+        println!("{} {}", size - base_size, base_size - n);
+
+        return Ok((size - base_size, base_size - n));
       }
     }
     Err(CrackError::Str("No block periodicity detected"))
